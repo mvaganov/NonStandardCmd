@@ -1,0 +1,25 @@
+{
+  "name": "com.codegiraffe.nonstandard.gameui",
+  "version": "0.0.1",
+  "displayName": "NonStandard Game UI",
+  "description": "Generalizable Game UI",
+  "unity": "2019.4",
+  "dependencies": {
+    "com.unity.textmeshpro": "3.0.6",
+    "com.codegiraffe.nonstandard.unityutility": "0.0.1",
+    "com.codegiraffe.nonstandard.system": "0.0.1",
+    "com.codegiraffe.nonstandard.scripting": "0.0.1"
+  },
+  "keywords": [
+    "library",
+    "utility",
+    "scripting",
+    "extensions"
+  ],
+  "author": {
+    "name": "Michael Vaganov",
+    "email": "mvaganov@hotmail.com",
+    "url": "http://www.codegiraffe.com"
+  },
+  "type": "library"
+}
