@@ -28,7 +28,7 @@ namespace NonStandard.Cli {
 		public bool textInput = true;
 		public bool clipboardPaste = true;
 		private bool _keyMapInitialized;
-		private bool _keyInputNormalAvailable = true;
+		//private bool _keyInputNormalAvailable = true;
 		private bool _keyInputControlAvailable = false;
 
 		public Color inputColor = new Color(0, 1, 0);
@@ -68,7 +68,7 @@ namespace NonStandard.Cli {
 			[Keyboard.current.slashKey] = new KMap('/', '?'),
 			[Keyboard.current.spaceKey] = new KMap(' ', ' '),
 			[Keyboard.current.backspaceKey] = new KMap('\b', '\b'),
-			[Keyboard.current.enterKey] = new KMap(null, '\n'),
+			[Keyboard.current.enterKey] = new KMap(new Action(FinishCurrentInput), '\n'),
 			[Keyboard.current.aKey] = new KMap('a', 'A'),
 			[Keyboard.current.bKey] = new KMap('b', 'B'),
 			[Keyboard.current.cKey] = new KMap('c', 'C', new Action(CopyToClipboard)),
@@ -160,14 +160,16 @@ namespace NonStandard.Cli {
 			bool isShift = IsShiftDown(), isCtrlDown = IsControlDown(), isNormal = !isShift && !isCtrlDown;
 			foreach (var kvp in keysDown) {
 				if (_keyMap.TryGetValue(kvp.Key, out KMap kmap)) {
-					if (isCtrlDown) { DoTheThing(kmap.ctrl); } if (isShift) { DoTheThing(kmap.shift); } else if (isNormal) { DoTheThing(kmap.normal); }
+					if (isCtrlDown) { _DoTheThing(kmap.ctrl, sb, alsoResolveNonText); }
+					if (isShift) { _DoTheThing(kmap.shift, sb, alsoResolveNonText); }
+					else if (isNormal) { _DoTheThing(kmap.normal, sb, alsoResolveNonText); }
 				}
 			}
-			void DoTheThing(object context) {
-				switch (context) {
+		}
+		private void _DoTheThing(object context, StringBuilder sb, bool alsoResolveNonText = true) {
+			switch (context) {
 				case char c: sb?.Append(c); break;
 				case Action a: if (alsoResolveNonText) a.Invoke(); break;
-				}
 			}
 		}
 		public static string ProcessInput(string currentLine) {
@@ -224,15 +226,6 @@ namespace NonStandard.Cli {
 			uinput.AddBindingIfMissing(new InputControlBinding("unpause the game and hide the command line console", "CmdLine/KeyInput",
 				ControlType.Button, new EventBind(this, nameof(KeyInput)), keyboardInputs));
 
-			//KeyBind(KCode.Equals, KModifier.AnyCtrl, "+ console font", nameof(IncreaseFontSize), target: this);
-			//KeyBind(KCode.Minus, KModifier.AnyCtrl, "- console font", nameof(DecreaseFontSize), target: this);
-			//KeyBind(KCode.Return, KModifier.NoShift, "submit console input", nameof(FinishCurrentInput), target:this);
-			//KeyBind(KCode.C, KModifier.AnyCtrl, "copy from command console", nameof(CopyToClipboard), target: this);
-			//KeyBind(KCode.V, KModifier.AnyCtrl, "paste into command console", nameof(PasteFromClipboard), target: this);
-			//KeyBind(KCode.UpArrow, KModifier.AnyAlt, "move cursor up", nameof(MoveCursorUp), target: this);
-			//KeyBind(KCode.LeftArrow, KModifier.AnyAlt, "move cursor left", nameof(MoveCursorLeft), target: this);
-			//KeyBind(KCode.DownArrow, KModifier.AnyAlt, "move cursor down", nameof(MoveCursorDown), target: this);
-			//KeyBind(KCode.RightArrow, KModifier.AnyAlt, "move cursor right", nameof(MoveCursorRight), target: this);
 			//KeyBind(KCode.UpArrow, KModifier.AnyShift, "shift window up", nameof(ShiftWindowUp), target: this);
 			//KeyBind(KCode.LeftArrow, KModifier.AnyShift, "shift window left", nameof(ShiftWindowLeft), target: this);
 			//KeyBind(KCode.DownArrow, KModifier.AnyShift, "shift window down", nameof(ShiftWindowDown), target: this);
@@ -255,21 +248,29 @@ namespace NonStandard.Cli {
 		public void ShiftWindowLeft() { MovWin(Coord.Left); }
 		public void ShiftWindowDown() { MovWin(Coord.Down); }
 		public void ShiftWindowRight() { MovWin(Coord.Right); }
-		void _KeyDown(KeyControl kc) { keysDown[kc] = Environment.TickCount; }
+		void _KeyDown(KeyControl kc) {
+			keysDown[kc] = Environment.TickCount;
+			bool isShift = IsShiftDown(), isCtrlDown = IsControlDown(), isNormal = !isShift && !isCtrlDown;
+			if (_keyMap.TryGetValue(kc, out KMap kmap)) {
+				if (isCtrlDown) { _DoTheThing(kmap.ctrl, currentLine, true); }
+				if (isShift) { _DoTheThing(kmap.shift, currentLine, true); }
+				else if (isNormal) { _DoTheThing(kmap.normal, currentLine, true); }
+			}
+		}
 		void _KeyUp(KeyControl kc) { keysDown.Remove(kc); }
 		public void KeyInput(InputAction.CallbackContext context) {
-			if (!_keyInputNormalAvailable) return;
+			//if (!_keyInputNormalAvailable) return;
 			switch (context.phase) {
 				case InputActionPhase.Started: _KeyDown(context.control as KeyControl); return;
 				case InputActionPhase.Canceled: _KeyUp(context.control as KeyControl); return;
 			}
 		}
-		public void KeyInputControl(InputAction.CallbackContext context) {
-			switch (context.phase) {
-				case InputActionPhase.Started: _keyInputNormalAvailable = false; return;
-				case InputActionPhase.Canceled: _keyInputNormalAvailable = true; return;
-			}
-		}
+		//public void KeyInputControl(InputAction.CallbackContext context) {
+		//	switch (context.phase) {
+		//		case InputActionPhase.Started: _keyInputNormalAvailable = false; return;
+		//		case InputActionPhase.Canceled: _keyInputNormalAvailable = true; return;
+		//	}
+		//}
 		private void Awake() {
 			console = GetComponent<UnityConsole>();
 			if (!_keyMapInitialized) {
