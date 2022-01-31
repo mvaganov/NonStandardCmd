@@ -223,7 +223,7 @@ namespace NonStandard.Cli {
 			for (int i = 0; i < keyboardKeys.Length; ++i) {
 				keyboardInputs[i] = "<Keyboard>/" + keyboardKeys[i];
 			}
-			uinput.AddBindingIfMissing(new InputControlBinding("unpause the game and hide the command line console", "CmdLine/KeyInput",
+			uinput.AddBindingIfMissing(new InputControlBinding("read keyboard input into the command line", "CmdLine/KeyInput",
 				ControlType.Button, new EventBind(this, nameof(KeyInput)), keyboardInputs));
 
 			//KeyBind(KCode.UpArrow, KModifier.AnyShift, "shift window up", nameof(ShiftWindowUp), target: this);
@@ -286,7 +286,7 @@ namespace NonStandard.Cli {
 			if (inputColorCode > 0) { console.PopForeColor(); }
 		}
 		void Update() {
-			string txt = ResolveInput(true);
+			string txt = currentLine.ToString();//ResolveInput(true);
 			if (string.IsNullOrEmpty(txt)) { return; }
 			WriteInputText(txt);
 			CommandLineUpdate(txt);
