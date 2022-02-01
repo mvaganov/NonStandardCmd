@@ -123,7 +123,7 @@ namespace NonStandard.Cli {
 			_pastedText = GUIUtility.systemCopyBuffer.Replace("\r","");
 		}
 		public void CopyToClipboard() {
-			Show.Log("copy mechanism from Input should be working: " + GUIUtility.systemCopyBuffer.StringifySmall());
+			Show.Log("copy mechanism from Input should be working automatically: " + GUIUtility.systemCopyBuffer.StringifySmall());
 		}
 		public bool KeyAvailable {
 			get {
@@ -167,6 +167,7 @@ namespace NonStandard.Cli {
 			}
 		}
 		private void _DoTheThing(object context, StringBuilder sb, bool alsoResolveNonText = true) {
+			Debug.Log(context);
 			switch (context) {
 				case char c: sb?.Append(c); break;
 				case Action a: if (alsoResolveNonText) a.Invoke(); break;
