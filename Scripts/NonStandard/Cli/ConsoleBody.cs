@@ -7,7 +7,7 @@ namespace NonStandard.Cli {
 	[Serializable] public class ConsoleBody {
 		public int spacesPerTab = 4;
 		public ConsoleTile defaultColors = new ConsoleTile(' ', ConsoleColor.Gray, ConsoleColor.Black);
-		public ConsoleTile currentColors = new ConsoleTile(' ', ConsoleColor.Gray, ConsoleColor.Black);
+		public ConsoleTile currentDefaultTile = new ConsoleTile(' ', ConsoleColor.Gray, ConsoleColor.Black);
 		public ConsoleColor[] unprintableColors = new ConsoleColor[] {
 			ConsoleColor.DarkGray, ConsoleColor.DarkCyan, ConsoleColor.DarkMagenta, ConsoleColor.DarkYellow,
 			ConsoleColor.DarkRed, ConsoleColor.DarkGreen, ConsoleColor.DarkBlue,
@@ -73,12 +73,12 @@ namespace NonStandard.Cli {
 			List<ConsoleTile> line;
 			for (int i = 0; i < text.Length; ++i) {
 				char c = text[i];
-				bool printC = true;
+				bool printCharacter = true;
 				switch (c) {
 				case Col.ColorSequenceDelim:
 					ParseColorSequenceDelimeter(text, ref i, out byte f, out byte b);
-					currentColors.fore = (f == Col.DefaultColorIndex) ? defaultColors.fore : f;
-					currentColors.back = (b == Col.DefaultColorIndex) ? defaultColors.back : b;
+					currentDefaultTile.fore = (f == Col.DefaultColorIndex) ? defaultColors.fore : f;
+					currentDefaultTile.back = (b == Col.DefaultColorIndex) ? defaultColors.back : b;
 					continue;
 				case '\b':
 					//if(lines.Count == 0) { printC = false; break; }
@@ -88,7 +88,7 @@ namespace NonStandard.Cli {
 					//Show.Log(writeCursor.col+" "+ line.Count + "         max:"+size.col);
 					if (writeCursor.col == line.Count) {
 						needToRediscover = writeCursor.col + 1 >= size.col;
-						printC = false; // don't print, that will add a character, we're removing a character
+						printCharacter = false; // don't print, that will add a character, we're removing a character
 						if (!IsAtOrBeforeStartingPoint()) {
 							if (line.Count == 0) {
 								if (writeCursor.row == lines.Count - 1) {
@@ -109,11 +109,11 @@ namespace NonStandard.Cli {
 						--writeCursor.row;
 						line = lines[writeCursor.row];
 						writeCursor.col += (short)(line.Count + 1);
-						printC = false; // don't print, that will add a character to the end of the previous line
+						printCharacter = false; // don't print, that will add a character to the end of the previous line
 					}
 					if (writeCursor.row < 0) { writeCursor.row = 0; }
 					if (IsAtOrBeforeStartingPoint()) {
-						printC = false;
+						printCharacter = false;
 						//Show.Log("there's probably a better algorithm for this. "+ writeCursor+" should be at "+ WriteCursorStartingPoint);
 						writeCursor = WriteCursorStartingPoint;
 					}
@@ -121,22 +121,28 @@ namespace NonStandard.Cli {
 				case '\n':
 					++writeCursor.row;
 					writeCursor.col = 0;
-					printC = false; // don't print, that will add a character to the end of the line
+					printCharacter = false; // don't print, that will add a character to the end of the line
 					break;
 				}
 				while (writeCursor.row >= lines.Count) { lines.Add(new List<ConsoleTile>()); }
-				if (printC) {
+				if (printCharacter) {
 					ConsoleTile thisLetter = GetPrintable(c, out short letterWidth, out short cursorSkip);
 					if(writeCursor.row >= lines.Count || writeCursor.row < 0) {
 						throw new Exception("bad write cursor state "+writeCursor+" with "+lines.Count+" rows");
 					}
 					line = lines[writeCursor.row];
 					int endOfChange = writeCursor.col + letterWidth + cursorSkip;
-					for (int s = writeCursor.col; s < endOfChange; ++s) {
-						if (s < line.Count) { line[s] = currentColors; }
-						if (s >= line.Count) { line.Add(currentColors); }
+					if (writeCursor.col < 0) {
+						throw new Exception("negative column? "+ writeCursor+" trying to write "+text.Length+" chars: "+text);
 					}
-					while (writeCursor.col + letterWidth > line.Count) { line.Add(currentColors); }
+					for (int s = writeCursor.col; s < endOfChange; ++s) {
+						if (s < line.Count) {
+							line[s] = currentDefaultTile;
+						} else if (s >= line.Count) {
+							line.Add(currentDefaultTile);
+						}
+					}
+					while (writeCursor.col + letterWidth > line.Count) { line.Add(currentDefaultTile); }
 					writeCursor.col += cursorSkip;
 					line[writeCursor.col] = thisLetter;
 					writeCursor.col += letterWidth;
@@ -165,15 +171,15 @@ namespace NonStandard.Cli {
 		/// <param name="cursorSkip">how far to move before printing the <see cref="ConsoleTile"/></param>
 		/// <returns></returns>
 		public ConsoleTile GetPrintable(char c, out short letterWidth, out short cursorSkip) {
-			ConsoleTile thisLetter = currentColors;
+			ConsoleTile thisLetter = currentDefaultTile;
 			cursorSkip = 0;
 			switch (c) {
 			case '\b':
-				thisLetter.Set(' ', currentColors.Fore, currentColors.Back);
+				thisLetter.Set(' ', currentDefaultTile.Fore, currentDefaultTile.Back);
 				letterWidth = 0;
 				return thisLetter;
 			case '\t':
-				thisLetter.Set('t', currentColors.Back, currentColors.Fore);
+				thisLetter.Set('t', currentDefaultTile.Back, currentDefaultTile.Fore);
 				letterWidth = (short)(spacesPerTab - (writeCursor.col % spacesPerTab));//1;//
 				//cursorSkip = (short)(spacesPerTab - (writeCursor.col % spacesPerTab) - 1);
 				return thisLetter;
@@ -195,11 +201,11 @@ namespace NonStandard.Cli {
 		}
 		public ConsoleTile GetAt(Coord cursor) {
 			if (cursor.row < 0 || cursor.row >= lines.Count || cursor.col < 0) {
-				return currentColors.CloneWithLetter('\0');
+				return currentDefaultTile.CloneWithLetter('\0');
 			}
 			List<ConsoleTile> line = lines[cursor.row];
 			if (cursor.col >= line.Count) {
-				return currentColors.CloneWithLetter('\0');
+				return currentDefaultTile.CloneWithLetter('\0');
 			}
 			return line[cursor.col];
 		}

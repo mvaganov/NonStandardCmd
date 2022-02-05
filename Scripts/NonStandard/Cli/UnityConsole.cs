@@ -40,6 +40,10 @@ namespace NonStandard.Cli {
 				}
 			}
 			internal void SetCursorPositionPoints(Vector3[] verts, int vertexIndex) {
+				if (vertexIndex >= verts.Length) {
+					Debug.LogWarning("too much? "+vertexIndex+" / "+verts.Length+" ");
+					return;
+				}
 				cursorMeshPosition[0] = verts[vertexIndex + 0];
 				cursorMeshPosition[1] = verts[vertexIndex + 1];
 				cursorMeshPosition[2] = verts[vertexIndex + 2];
@@ -186,10 +190,10 @@ namespace NonStandard.Cli {
 
 		public int WindowHeight { get => Window.Height; set => Window.Height = value; }
 		public int WindowWidth { get => Window.Width; set => Window.Width= value; }
-		public ConsoleColor ForegoundColor { get => body.currentColors.Fore; set => body.currentColors.Fore = value; }
-		public ConsoleColor BackgroundColor { get => body.currentColors.Back; set => body.currentColors.Back = value; }
-		public byte ForeColor { get => body.currentColors.fore; set => body.currentColors.fore = value; }
-		public byte BackColor { get => body.currentColors.back; set => body.currentColors.back = value; }
+		public ConsoleColor ForegoundColor { get => body.currentDefaultTile.Fore; set => body.currentDefaultTile.Fore = value; }
+		public ConsoleColor BackgroundColor { get => body.currentDefaultTile.Back; set => body.currentDefaultTile.Back = value; }
+		public byte ForeColor { get => body.currentDefaultTile.fore; set => body.currentDefaultTile.fore = value; }
+		public byte BackColor { get => body.currentDefaultTile.back; set => body.currentDefaultTile.back = value; }
 		public int BufferHeight => body.Size.Y;
 		public int BufferWidth => body.Size.X;
 		public int CursorLeft { get => body.CursorLeft; set => body.CursorLeft = value; }
@@ -216,7 +220,7 @@ namespace NonStandard.Cli {
 			public Tile(char letter, ColorRGBA color, float height) { this.letter = letter;this.height = height;this.color = color; }
 		}
 
-		public void ResetColor() { body.currentColors = body.defaultColors; }
+		public void ResetColor() { body.currentDefaultTile = body.defaultColors; }
 		private void Awake() {
 			colorSettings.FillInDefaultPalette();
 			Window.body = body;
@@ -402,7 +406,7 @@ namespace NonStandard.Cli {
 			}
 		}
 		public void TransferToTMP(bool foreground, List<Tile> tiles, DisplayCalculations calc = null) {
-			TMP_Text label;
+			TMP_Text tmpText;
 			char[] letters = new char[tiles.Count];
 			for (int i = 0; i < letters.Length; ++i) { letters[i] = tiles[i].letter; }
 			string text = new string(letters);
@@ -410,27 +414,27 @@ namespace NonStandard.Cli {
 				if (inputField) {
 					inputField.text = text;
 					inputField.ForceLabelUpdate();
-					label = inputField.textComponent;
+					tmpText = inputField.textComponent;
 				} else {
-					label = this.text;
-					label.text = text;
-					label.ForceMeshUpdate();
+					tmpText = this.text;
+					tmpText.text = text;
+					tmpText.ForceMeshUpdate();
 				}
 			} else {
-				label = charBack;
-				label.text = text;
-				label.ForceMeshUpdate();
+				tmpText = charBack;
+				tmpText.text = text;
+				tmpText.ForceMeshUpdate();
 			}
-			TMP_CharacterInfo[] chars = label.textInfo.characterInfo;
+			TMP_CharacterInfo[] chars = tmpText.textInfo.characterInfo;
 			Vector3 normal = -transform.forward;
 			Color32 color;
 			float height;
 			bool vertChange = false, colorChange = false;
 
 			//StringBuilder sb = new StringBuilder();
-			for (int m = 0; m < label.textInfo.meshInfo.Length; ++m) {
-				Color32[] vertColors = label.textInfo.meshInfo[m].colors32;
-				Vector3[] verts = label.textInfo.meshInfo[m].vertices;
+			for (int m = 0; m < tmpText.textInfo.meshInfo.Length; ++m) {
+				Color32[] vertColors = tmpText.textInfo.meshInfo[m].colors32;
+				Vector3[] verts = tmpText.textInfo.meshInfo[m].vertices;
 				calc?.CalculateVertices(verts);
 				calc?.StartCalculatingText();
 				for (int i = 0; i < chars.Length; ++i) {
@@ -443,7 +447,11 @@ namespace NonStandard.Cli {
 					if (!cinfo.isVisible) continue;
 					int vertexIndex = cinfo.vertexIndex;
 					if(i == cursor.index) {
-						cursor.SetCursorPositionPoints(verts, vertexIndex);
+						if (vertexIndex >= verts.Length) {
+							Debug.LogWarning("weirdness happening. "+tmpText.text);
+						} else {
+							cursor.SetCursorPositionPoints(verts, vertexIndex);
+						}
 					}
 					if (vertexIndex < vertColors.Length && i < tiles.Count && !vertColors[vertexIndex].Eq(color = tiles[i].color)) {
 						colorChange = true;
@@ -463,8 +471,8 @@ namespace NonStandard.Cli {
 				}
 			}
 			//Show.Log(sb);
-			if (colorChange) { label.UpdateVertexData(TMP_VertexDataUpdateFlags.Colors32); }
-			if (vertChange) { label.UpdateVertexData(TMP_VertexDataUpdateFlags.Vertices); }
+			if (colorChange) { tmpText.UpdateVertexData(TMP_VertexDataUpdateFlags.Colors32); }
+			if (vertChange) { tmpText.UpdateVertexData(TMP_VertexDataUpdateFlags.Vertices); }
 		}
 	}
 }

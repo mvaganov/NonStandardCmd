@@ -10,6 +10,7 @@ namespace NonStandard.Cli {
 	[RequireComponent(typeof(UserInput))]
 	public class UnityConsoleUiToggle : MonoBehaviour { 
 		bool disabledRectMask2d = false;
+		[Tooltip("which state the console input is active in")]
 		public ConsoleUiState consoleInputActive = ConsoleUiState.ScreenSpace;
 		public enum ConsoleUiState { None, ScreenSpace, WorldSpace, Both }
 		[System.Serializable]

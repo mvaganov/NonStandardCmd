@@ -11,8 +11,9 @@ using UnityEngine.InputSystem.Controls;
 namespace NonStandard.Cli {
 	[RequireComponent(typeof(UnityConsole)),RequireComponent(typeof(UserInput))]
 	public class UnityConsoleInput : MonoBehaviour {
-		protected StringBuilder currentLine = new StringBuilder();
-		protected int indexInCurrentLine = 0;
+		private UnityConsole console;
+		protected StringBuilder _inputBuffer = new StringBuilder();
+		protected int _indexInInputBuffer = 0;
 		/// <summary>
 		/// when a key was pressed
 		/// </summary>
@@ -21,21 +22,23 @@ namespace NonStandard.Cli {
 		/// <summary>
 		/// added to by the <see cref="ReadLine(Show.PrintFunc)"/> function
 		/// </summary>
-		protected List<Show.PrintFunc> tempLineInputListeners = new List<Show.PrintFunc>();
+//		protected List<Show.PrintFunc> tempLineInputListeners = new List<Show.PrintFunc>();
 		/// <summary>
 		/// if false, typing (and pasting) will not add characters to the current input, or to the console
 		/// </summary>
-		public bool textInput = true;
-		public bool clipboardPaste = true;
-		private bool _keyMapInitialized;
+//		public bool textInput = true;
+//		public bool clipboardPaste = true;
+//		private bool _keyMapInitialized;
 		//private bool _keyInputNormalAvailable = true;
-		private bool _keyInputControlAvailable = false;
+//		private bool _keyInputControlAvailable = false;
 
 		public Color inputColor = new Color(0, 1, 0);
-		int inputColorCode = -1;
-		private UnityConsole console;
+		/// <summary>
+		/// the color code to use for user input. will be set during initialization
+		/// </summary>
+		private int inputColorCode = -1;
 
-		public UnityEvent_string inputListener;
+//		public UnityEvent_string inputListener;
 
 		private struct KMap {
 			public object normal, shift, ctrl;
@@ -99,7 +102,7 @@ namespace NonStandard.Cli {
 			[Keyboard.current.leftArrowKey] = new KMap(new Action(MoveCursorLeft), null),
 			[Keyboard.current.downArrowKey] = new KMap(new Action(MoveCursorDown), null),
 			[Keyboard.current.rightArrowKey] = new KMap(new Action(MoveCursorRight), null),
-			};
+		};
 		public static bool IsShiftDown() { return Keyboard.current.shiftKey.isPressed; }
 		public static bool IsControlDown() { return Keyboard.current.ctrlKey.isPressed; }
 		public static bool IsAltDown() { return Keyboard.current.altKey.isPressed; }
@@ -119,8 +122,9 @@ namespace NonStandard.Cli {
 		private void MovCur(Coord dir) { console.Cursor += dir; }
 		private void MovWin(Coord dir) { console.ScrollRenderWindow(dir); ; }
 		public void PasteFromClipboard() {
-			if (!clipboardPaste) return;
+//			if (!clipboardPaste) return;
 			_pastedText = GUIUtility.systemCopyBuffer.Replace("\r","");
+			_inputBuffer.Append(_pastedText);
 		}
 		public void CopyToClipboard() {
 			Show.Log("copy mechanism from Input should be working automatically: " + GUIUtility.systemCopyBuffer.StringifySmall());
@@ -141,42 +145,36 @@ namespace NonStandard.Cli {
 		//	return list;
 		//}
 		//public void Read(Action<KCode> kCodeListener) { tempKeyCodeListeners.Add(kCodeListener); }
-		public void ReadLine(Show.PrintFunc lineInputListener) { tempLineInputListeners.Add(lineInputListener); }
-		public string ResolveInput(bool alsoResolveNonText) {
-			StringBuilder sb = textInput ? new StringBuilder() : null;
-			AddPastedTextToInput(sb);
-			AddKeysToInput(sb, alsoResolveNonText);
-			return sb?.ToString() ?? null;
-		}
-		void AddPastedTextToInput(StringBuilder sb) {
-			if (_pastedText == null) { return; }
-			sb.Append(_pastedText);
-			_pastedText = null;
-		}
-		void AddKeysToInput(StringBuilder sb, bool alsoResolveNonText = true) {
-			keysDown.Clear();
-			if (!KeyAvailable) return;
-			//GetKeyDown(keysDown);
-			bool isShift = IsShiftDown(), isCtrlDown = IsControlDown(), isNormal = !isShift && !isCtrlDown;
-			foreach (var kvp in keysDown) {
-				if (_keyMap.TryGetValue(kvp.Key, out KMap kmap)) {
-					if (isCtrlDown) { _DoTheThing(kmap.ctrl, sb, alsoResolveNonText); }
-					if (isShift) { _DoTheThing(kmap.shift, sb, alsoResolveNonText); }
-					else if (isNormal) { _DoTheThing(kmap.normal, sb, alsoResolveNonText); }
-				}
-			}
-		}
-		private void _DoTheThing(object context, StringBuilder sb, bool alsoResolveNonText = true) {
-			Debug.Log(context);
-			switch (context) {
-				case char c: sb?.Append(c); break;
-				case Action a: if (alsoResolveNonText) a.Invoke(); break;
-			}
-		}
-		public static string ProcessInput(string currentLine) {
+//		public void ReadLine(Show.PrintFunc lineInputListener) { tempLineInputListeners.Add(lineInputListener); }
+		//public string ResolveInput(bool alsoResolveNonText) {
+		//	StringBuilder sb = textInput ? new StringBuilder() : null;
+		//	AddPastedTextToInput(sb);
+		//	AddKeysToInput(sb, alsoResolveNonText);
+		//	return sb?.ToString() ?? null;
+		//}
+		//void AddPastedTextToInput(StringBuilder sb) {
+		//	if (_pastedText == null) { return; }
+		//	sb.Append(_pastedText);
+		//	_pastedText = null;
+		//}
+		//void AddKeysToInput(StringBuilder sb, bool alsoResolveNonText = true) {
+		//	keysDown.Clear();
+		//	if (!KeyAvailable) return;
+		//	//GetKeyDown(keysDown);
+		//	bool isShift = IsShiftDown(), isCtrlDown = IsControlDown(), isNormal = !isShift && !isCtrlDown;
+		//	foreach (var kvp in keysDown) {
+		//		if (_keyMap.TryGetValue(kvp.Key, out KMap kmap)) {
+		//			if (isCtrlDown) { _DoTheThing(kmap.ctrl, sb, alsoResolveNonText); }
+		//			if (isShift) { _DoTheThing(kmap.shift, sb, alsoResolveNonText); }
+		//			else if (isNormal) { _DoTheThing(kmap.normal, sb, alsoResolveNonText); }
+		//		}
+		//	}
+		//}
+
+		public static string ProcessInput(string input) {
 			StringBuilder finalString = new StringBuilder();
-			for (int i = 0; i < currentLine.Length; ++i) {
-				char c = currentLine[i];
+			for (int i = 0; i < input.Length; ++i) {
+				char c = input[i];
 				switch (c) {
 				case '\b':
 					if (finalString.Length > 0) {
@@ -186,39 +184,42 @@ namespace NonStandard.Cli {
 				//case '\n': return finalString.ToString();
 				case '\r': break;
 				case '\\':
-					if (++i < currentLine.Length) { c = currentLine[i]; }
+					if (++i < input.Length) { c = input[i]; }
 					finalString.Append(c); break;
 				default: finalString.Append(c); break;
 				}
 			}
 			return finalString.ToString();
 		}
-		bool IsListeningToLine() { return tempLineInputListeners != null && tempLineInputListeners.Count > 0; }
+//		bool IsListeningToLine() { return tempLineInputListeners != null && tempLineInputListeners.Count > 0; }
 		public void CommandLineUpdate(string txt) {
-			currentLine.Insert(indexInCurrentLine, txt);
-			indexInCurrentLine += txt.Length;
+			if (_indexInInputBuffer < 0 || _indexInInputBuffer > _inputBuffer.Length) {
+				Debug.Log("oob? "+ _indexInInputBuffer+" / "+ _inputBuffer.Length);
+			}
+			_inputBuffer.Insert(_indexInInputBuffer, txt);
+			_indexInInputBuffer += txt.Length;
 		}
 		public void FinishCurrentInput() {
-			string processedInput = ProcessInput(currentLine.ToString());
-			//Show.Log(currentLine.ToString().StringifySmall()+" -> "+processedInput.StringifySmall());
-			currentLine.Clear();
-			indexInCurrentLine = 0;
+			string processedInput = ProcessInput(_inputBuffer.ToString());
+			//Show.Log(_inputBuffer.ToString().StringifySmall()+" -> "+processedInput.StringifySmall());
+			_inputBuffer.Clear();
+			_indexInInputBuffer = 0;
 			console.Write("\n");
 			console.body.RestartWriteCursor();
 			if (string.IsNullOrEmpty(processedInput)) { return; }
-			inputListener.Invoke(processedInput);
-			if (IsListeningToLine()) {
-				tempLineInputListeners.ForEach(action => action.Invoke(processedInput));
-				tempLineInputListeners.Clear();
-			}
+//			inputListener.Invoke(processedInput);
+			//if (IsListeningToLine()) {
+			//	tempLineInputListeners.ForEach(action => action.Invoke(processedInput));
+			//	tempLineInputListeners.Clear();
+			//}
 		}
 #if UNITY_EDITOR
 		private void Reset() {
 			UnityConsole console = GetComponent<UnityConsole>();
-			UnityConsoleCommander consoleCommander = GetComponent<UnityConsoleCommander>();
-			if (consoleCommander != null) {
-				EventBind.On(inputListener, consoleCommander, nameof(consoleCommander.DoCommand));
-			}
+			//UnityConsoleCommander consoleCommander = GetComponent<UnityConsoleCommander>();
+			//if (consoleCommander != null) {
+			//	EventBind.On(inputListener, consoleCommander, nameof(consoleCommander.DoCommand));
+			//}
 			UserInput uinput = GetComponent<UserInput>();
 			string[] keyboardInputs = new string[keyboardKeys.Length];
 			for (int i = 0; i < keyboardKeys.Length; ++i) {
@@ -233,12 +234,12 @@ namespace NonStandard.Cli {
 			//KeyBind(KCode.RightArrow, KModifier.AnyShift, "shift window right", nameof(ShiftWindowRight), target: this);
 		}
 #endif
-		public string[] actionsEnabledWithControl = new string[] {
-			"CmdLine/biggerFont","CmdLine/smallerFont","CmdLine/biggerFont","CmdLine/copy","CmdLine/paste",
-		};
-		public string[] actionsEnabledWithoutControl = new string[] {
-			"CmdLine/submitInput",
-		};
+		//public string[] actionsEnabledWithControl = new string[] {
+		//	"CmdLine/biggerFont","CmdLine/smallerFont","CmdLine/biggerFont","CmdLine/copy","CmdLine/paste",
+		//};
+		//public string[] actionsEnabledWithoutControl = new string[] {
+		//	"CmdLine/submitInput",
+		//};
 		public void IncreaseFontSize() { console.AddToFontSize(1); }
 		public void DecreaseFontSize() { console.AddToFontSize(-1); }
 		public void MoveCursorUp() { MovCur(Coord.Up); }
@@ -249,21 +250,40 @@ namespace NonStandard.Cli {
 		public void ShiftWindowLeft() { MovWin(Coord.Left); }
 		public void ShiftWindowDown() { MovWin(Coord.Down); }
 		public void ShiftWindowRight() { MovWin(Coord.Right); }
-		void _KeyDown(KeyControl kc) {
-			keysDown[kc] = Environment.TickCount;
-			bool isShift = IsShiftDown(), isCtrlDown = IsControlDown(), isNormal = !isShift && !isCtrlDown;
-			if (_keyMap.TryGetValue(kc, out KMap kmap)) {
-				if (isCtrlDown) { _DoTheThing(kmap.ctrl, currentLine, true); }
-				if (isShift) { _DoTheThing(kmap.shift, currentLine, true); }
-				else if (isNormal) { _DoTheThing(kmap.normal, currentLine, true); }
+		private void ProcessKeyMappedTarget(object context, StringBuilder sb, bool alsoResolveNonText = true) {
+			Debug.Log(context);
+			switch (context) {
+				case char c:      sb?.Append(c);   break;
+				case string str:  sb?.Append(str); break;
+				case Action a: if (alsoResolveNonText) a.Invoke(); break;
 			}
 		}
-		void _KeyUp(KeyControl kc) { keysDown.Remove(kc); }
+		protected void KeyDown(KeyControl kc) {
+			if (!enabled) {
+				Debug.Log("ignoring "+kc.name+", ConsoleInput is disabled.");
+				return;
+			}
+			keysDown[kc] = Environment.TickCount;
+			bool isShift = IsShiftDown(), isCtrl = IsControlDown(), isNormal = !isShift && !isCtrl;
+			if (_KeyMap().TryGetValue(kc, out KMap kmap)) {
+				object target = null;
+				/**/ if (isCtrl) { target = kmap.ctrl; }
+				else if (isShift) { target = kmap.shift; }
+				else if (isNormal) { target = kmap.normal; }
+				if (target != null) {
+					ProcessKeyMappedTarget(target, _inputBuffer, true);
+				}
+			}
+		}
+		protected void KeyUp(KeyControl kc) {
+			if (!enabled) { return; }
+			keysDown.Remove(kc);
+		}
 		public void KeyInput(InputAction.CallbackContext context) {
 			//if (!_keyInputNormalAvailable) return;
 			switch (context.phase) {
-				case InputActionPhase.Started: _KeyDown(context.control as KeyControl); return;
-				case InputActionPhase.Canceled: _KeyUp(context.control as KeyControl); return;
+				case InputActionPhase.Started: KeyDown(context.control as KeyControl); return;
+				case InputActionPhase.Canceled: KeyUp(context.control as KeyControl); return;
 			}
 		}
 		//public void KeyInputControl(InputAction.CallbackContext context) {
@@ -274,23 +294,30 @@ namespace NonStandard.Cli {
 		//}
 		private void Awake() {
 			console = GetComponent<UnityConsole>();
-			if (!_keyMapInitialized) {
-				_keyMapInitialized = true;
-			}
+			//if (!_keyMapInitialized) {
+			//	_keyMapInitialized = true;
+			//}
 		}
 		private void Start() {
 			inputColorCode = console.AddConsoleColor(inputColor);
+			WriteInputText("testing");
 		}
 		public void WriteInputText(string inputText) {
 			if (inputColorCode > 0) { console.PushForeColor((byte)inputColorCode); }
 			console.Write(inputText, true);
 			if (inputColorCode > 0) { console.PopForeColor(); }
 		}
+		public string CURRENT;
 		void Update() {
-			string txt = currentLine.ToString();//ResolveInput(true);
+			string txt = _inputBuffer.ToString();
 			if (string.IsNullOrEmpty(txt)) { return; }
-			WriteInputText(txt);
+			_inputBuffer.Clear();
+			//ResolveInput(true);
+			//WriteInputText(txt);
 			CommandLineUpdate(txt);
+		}
+		private void OnDisable() {
+			Debug.Log("disabled console input");
 		}
 	}
 }
