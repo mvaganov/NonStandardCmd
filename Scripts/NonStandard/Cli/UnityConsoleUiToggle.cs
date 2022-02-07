@@ -1,5 +1,6 @@
 ﻿using NonStandard.Inputs;
 using NonStandard.Process;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.InputSystem;
@@ -29,6 +30,7 @@ namespace NonStandard.Cli {
 				new EventBind(this, nameof(SetScreenSpaceCanvas)), "<Keyboard>/backquote"));
 			uinput.AddBindingIfMissing(new InputControlBinding("unpause the game and hide the command line console", "UI/HideCmdLine", ControlType.Button,
 				new EventBind(this, nameof(SetScreenSpaceCanvas)), "<Keyboard>/escape"));
+			uinput.AddActionMapToBind("UI");
 			//KeyBind(KCode.BackQuote, KModifier.None, "activate console", nameof(SetScreenSpaceCanvas), target: this);
 			//KeyBind(KCode.Escape, KModifier.None, "deactivate console", nameof(SetWorldSpaceCanvas), target: this);
 			EventBind.On(callbacks.WhenThisActivates, this, nameof(Pause));

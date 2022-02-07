@@ -192,13 +192,13 @@ namespace NonStandard.Cli {
 			return finalString.ToString();
 		}
 //		bool IsListeningToLine() { return tempLineInputListeners != null && tempLineInputListeners.Count > 0; }
-		public void CommandLineUpdate(string txt) {
-			if (_indexInInputBuffer < 0 || _indexInInputBuffer > _inputBuffer.Length) {
-				Debug.Log("oob? "+ _indexInInputBuffer+" / "+ _inputBuffer.Length);
-			}
-			_inputBuffer.Insert(_indexInInputBuffer, txt);
-			_indexInInputBuffer += txt.Length;
-		}
+		//public void CommandLineUpdate(string txt) {
+		//	if (_indexInInputBuffer < 0 || _indexInInputBuffer > _inputBuffer.Length) {
+		//		Debug.Log("oob? "+ _indexInInputBuffer+" / "+ _inputBuffer.Length);
+		//	}
+		//	_inputBuffer.Insert(_indexInInputBuffer, txt);
+		//	_indexInInputBuffer += txt.Length;
+		//}
 		public void FinishCurrentInput() {
 			string processedInput = ProcessInput(_inputBuffer.ToString());
 			//Show.Log(_inputBuffer.ToString().StringifySmall()+" -> "+processedInput.StringifySmall());
@@ -227,7 +227,7 @@ namespace NonStandard.Cli {
 			}
 			uinput.AddBindingIfMissing(new InputControlBinding("read keyboard input into the command line", "CmdLine/KeyInput",
 				ControlType.Button, new EventBind(this, nameof(KeyInput)), keyboardInputs));
-
+			uinput.AddActionMapToBind("CmdLine");
 			//KeyBind(KCode.UpArrow, KModifier.AnyShift, "shift window up", nameof(ShiftWindowUp), target: this);
 			//KeyBind(KCode.LeftArrow, KModifier.AnyShift, "shift window left", nameof(ShiftWindowLeft), target: this);
 			//KeyBind(KCode.DownArrow, KModifier.AnyShift, "shift window down", nameof(ShiftWindowDown), target: this);
@@ -250,13 +250,25 @@ namespace NonStandard.Cli {
 		public void ShiftWindowLeft() { MovWin(Coord.Left); }
 		public void ShiftWindowDown() { MovWin(Coord.Down); }
 		public void ShiftWindowRight() { MovWin(Coord.Right); }
-		private void ProcessKeyMappedTarget(object context, StringBuilder sb, bool alsoResolveNonText = true) {
-			Debug.Log(context);
-			switch (context) {
-				case char c:      sb?.Append(c);   break;
-				case string str:  sb?.Append(str); break;
-				case Action a: if (alsoResolveNonText) a.Invoke(); break;
+		private int AddStr(StringBuilder sb, int index, string str) {
+			Debug.Log("buffer index: "+index);
+			if (index >= sb.Length) {
+				sb.Append(str);
+			} else {
+				sb.Insert(index, str);
 			}
+			return str.Length;
+		}
+		private int ProcessKeyMappedTarget(object context, StringBuilder sb, int index, bool alsoResolveNonText = true) {
+			Debug.Log(context);
+			if (index < 0) { index = sb.Length + 1 + index; }
+			switch (context) {
+				case char c:      return AddStr(sb, index, c.ToString());
+				case string str: return AddStr(sb, index, str);
+				case Action a: if (alsoResolveNonText) a.Invoke(); return 0;
+				case Func<string> fstr: return AddStr(sb, index, fstr.Invoke());
+			}
+			return 0;
 		}
 		protected void KeyDown(KeyControl kc) {
 			if (!enabled) {
@@ -265,13 +277,14 @@ namespace NonStandard.Cli {
 			}
 			keysDown[kc] = Environment.TickCount;
 			bool isShift = IsShiftDown(), isCtrl = IsControlDown(), isNormal = !isShift && !isCtrl;
+			Debug.Log(isCtrl + " " + isShift + " "+isNormal);
 			if (_KeyMap().TryGetValue(kc, out KMap kmap)) {
 				object target = null;
 				/**/ if (isCtrl) { target = kmap.ctrl; }
 				else if (isShift) { target = kmap.shift; }
 				else if (isNormal) { target = kmap.normal; }
 				if (target != null) {
-					ProcessKeyMappedTarget(target, _inputBuffer, true);
+					_indexInInputBuffer += ProcessKeyMappedTarget(target, _inputBuffer, _indexInInputBuffer, true);
 				}
 			}
 		}
@@ -282,8 +295,10 @@ namespace NonStandard.Cli {
 		public void KeyInput(InputAction.CallbackContext context) {
 			//if (!_keyInputNormalAvailable) return;
 			switch (context.phase) {
-				case InputActionPhase.Started: KeyDown(context.control as KeyControl); return;
+				// performed happens for each key, started only happens when a keypress sequence starts and multiple keys are pressed simultaneously
+				case InputActionPhase.Performed: KeyDown(context.control as KeyControl); return;
 				case InputActionPhase.Canceled: KeyUp(context.control as KeyControl); return;
+				default: Debug.Log(context.phase+" " +context.control.name); break;
 			}
 		}
 		//public void KeyInputControl(InputAction.CallbackContext context) {
@@ -297,10 +312,12 @@ namespace NonStandard.Cli {
 			//if (!_keyMapInitialized) {
 			//	_keyMapInitialized = true;
 			//}
+			Debug.Log("awake");
 		}
 		private void Start() {
 			inputColorCode = console.AddConsoleColor(inputColor);
 			WriteInputText("testing");
+			Debug.Log("start");
 		}
 		public void WriteInputText(string inputText) {
 			if (inputColorCode > 0) { console.PushForeColor((byte)inputColorCode); }
@@ -312,9 +329,11 @@ namespace NonStandard.Cli {
 			string txt = _inputBuffer.ToString();
 			if (string.IsNullOrEmpty(txt)) { return; }
 			_inputBuffer.Clear();
+			console.Write(txt, true);
 			//ResolveInput(true);
 			//WriteInputText(txt);
-			CommandLineUpdate(txt);
+			//CommandLineUpdate(txt);
+			Debug.Log("updated " + txt);
 		}
 		private void OnDisable() {
 			Debug.Log("disabled console input");
