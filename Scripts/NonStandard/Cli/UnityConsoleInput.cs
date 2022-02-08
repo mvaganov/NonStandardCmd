@@ -12,6 +12,7 @@ namespace NonStandard.Cli {
 	[RequireComponent(typeof(UnityConsole)),RequireComponent(typeof(UserInput))]
 	public class UnityConsoleInput : MonoBehaviour {
 		private UnityConsole console;
+		protected StringBuilder _keyBuffer = new StringBuilder();
 		protected StringBuilder _inputBuffer = new StringBuilder();
 		protected int _indexInInputBuffer = 0;
 		/// <summary>
@@ -119,12 +120,101 @@ namespace NonStandard.Cli {
 			"upArrow","leftArrow","downArrow","rightArrow",
 			//"numpad1","numpad2","numpad3","numpad4","numpad5","numpad6","numpad7","numpad8","numpad9","numpad0",
 		};
-		private void MovCur(Coord dir) { console.Cursor += dir; }
+		private void MovCur(Coord dir) {
+			console.Cursor += dir;
+		}
+		//private void MovCur(Coord dir) {
+		//	if (_inputBuffer.Length == 0) {
+		//		console.Cursor += dir;
+		//		return;
+		//	}
+		//	switch (dir.x) {
+		//		case +1:
+		//			if (_indexInInputBuffer >= _inputBuffer.Length) {
+		//				break;
+		//			}
+		//			if (_inputBuffer[_indexInInputBuffer] == '\n') {
+		//				if (_inputArea.IsValid) {
+		//					console.Cursor = new Coord(_inputArea.Min.x, console.Cursor.y + 1);
+		//				} else {
+		//					console.Cursor = new Coord(0, console.Cursor.y + 1);
+		//				}
+		//			} else {
+		//				if (_inputArea.IsValid) {
+		//					if (console.Cursor.x < _inputArea.Max.x) {
+		//						console.Cursor += dir;
+		//					} else {
+		//						console.Cursor = new Coord(_inputArea.Min.x, console.Cursor.y + 1);
+		//					}
+		//				} else if (console.Cursor.x < console.Window.Width - 1) {
+		//					console.Cursor += dir;
+		//				} else {
+		//					console.Cursor = new Coord(0, console.Cursor.y + 1);
+		//				}
+		//			}
+		//			++_indexInInputBuffer;
+		//			break;
+		//		case -1:
+		//			if (_indexInInputBuffer <= 0) {
+		//				break;
+		//			}
+		//			--_indexInInputBuffer;
+		//			if (_inputBuffer[_indexInInputBuffer] == '\n') {
+		//				int column = HowManyCharsBackBeforeTheLineStarts(_indexInInputBuffer);
+		//				if (_inputArea.IsValid) {
+		//					console.Cursor = new Coord(_inputArea.Min.x + column, console.Cursor.y - 1);
+		//				} else {
+		//					console.Cursor = new Coord(column, console.Cursor.y - 1);
+		//				}
+		//			} else {
+		//				if (_inputArea.IsValid) {
+		//					if (console.Cursor.x > _inputArea.Min.x) {
+		//						console.Cursor += dir;
+		//					} else {
+		//						console.Cursor = new Coord(_inputArea.Max.x - 1, console.Cursor.y - 1);
+		//					}
+		//				} else if (console.Cursor.x > 0) {
+		//					console.Cursor += dir;
+		//				} else {
+		//					console.Cursor = new Coord(console.Window.Width - 1, console.Cursor.y - 1);
+		//				}
+		//			}
+		//			break;
+		//		case 0:
+		//			Coord target = console.Cursor + dir;
+		//			switch (dir.y) {
+		//				case -1:
+		//					while (_indexInInputBuffer >= 0) {
+		//						MovCur(Coord.Left);
+		//						if (console.Cursor.y == target.y) {
+		//							if (console.Cursor.x <= target.x) {
+		//								break;
+		//							}
+		//						}
+		//					}
+		//					break;
+		//				case +1:
+		//					while (_indexInInputBuffer <= _inputBuffer.Length) {
+		//						MovCur(Coord.Right);
+		//						if (console.Cursor.y == target.y) {
+		//							if (console.Cursor.x == target.x) {
+		//								break;
+		//							}
+		//						} else if (console.Cursor.y > target.y) {
+		//							MovCur(Coord.Left);
+		//							break;
+		//						}
+		//					}
+		//					break;
+		//			}
+		//			break;
+		//	}
+		//}
 		private void MovWin(Coord dir) { console.ScrollRenderWindow(dir); ; }
 		public void PasteFromClipboard() {
 //			if (!clipboardPaste) return;
 			_pastedText = GUIUtility.systemCopyBuffer.Replace("\r","");
-			_inputBuffer.Append(_pastedText);
+			_keyBuffer.Append(_pastedText);
 		}
 		public void CopyToClipboard() {
 			Show.Log("copy mechanism from Input should be working automatically: " + GUIUtility.systemCopyBuffer.StringifySmall());
@@ -200,9 +290,9 @@ namespace NonStandard.Cli {
 		//	_indexInInputBuffer += txt.Length;
 		//}
 		public void FinishCurrentInput() {
-			string processedInput = ProcessInput(_inputBuffer.ToString());
+			string processedInput = ProcessInput(_keyBuffer.ToString());
 			//Show.Log(_inputBuffer.ToString().StringifySmall()+" -> "+processedInput.StringifySmall());
-			_inputBuffer.Clear();
+			_keyBuffer.Clear();
 			_indexInInputBuffer = 0;
 			console.Write("\n");
 			console.body.RestartWriteCursor();
@@ -277,14 +367,13 @@ namespace NonStandard.Cli {
 			}
 			keysDown[kc] = Environment.TickCount;
 			bool isShift = IsShiftDown(), isCtrl = IsControlDown(), isNormal = !isShift && !isCtrl;
-			Debug.Log(isCtrl + " " + isShift + " "+isNormal);
 			if (_KeyMap().TryGetValue(kc, out KMap kmap)) {
 				object target = null;
 				/**/ if (isCtrl) { target = kmap.ctrl; }
 				else if (isShift) { target = kmap.shift; }
 				else if (isNormal) { target = kmap.normal; }
 				if (target != null) {
-					_indexInInputBuffer += ProcessKeyMappedTarget(target, _inputBuffer, _indexInInputBuffer, true);
+					_indexInInputBuffer += ProcessKeyMappedTarget(target, _keyBuffer, _indexInInputBuffer, true);
 				}
 			}
 		}
@@ -295,10 +384,9 @@ namespace NonStandard.Cli {
 		public void KeyInput(InputAction.CallbackContext context) {
 			//if (!_keyInputNormalAvailable) return;
 			switch (context.phase) {
-				// performed happens for each key, started only happens when a keypress sequence starts and multiple keys are pressed simultaneously
+				// performed happens for each key, started only happens when the first keypress in a sequence happens
 				case InputActionPhase.Performed: KeyDown(context.control as KeyControl); return;
 				case InputActionPhase.Canceled: KeyUp(context.control as KeyControl); return;
-				default: Debug.Log(context.phase+" " +context.control.name); break;
 			}
 		}
 		//public void KeyInputControl(InputAction.CallbackContext context) {
@@ -312,28 +400,23 @@ namespace NonStandard.Cli {
 			//if (!_keyMapInitialized) {
 			//	_keyMapInitialized = true;
 			//}
-			Debug.Log("awake");
 		}
 		private void Start() {
 			inputColorCode = console.AddConsoleColor(inputColor);
-			WriteInputText("testing");
-			Debug.Log("start");
+			console.Write("testing");
 		}
 		public void WriteInputText(string inputText) {
 			if (inputColorCode > 0) { console.PushForeColor((byte)inputColorCode); }
 			console.Write(inputText, true);
+			_inputBuffer.Append(inputText);
 			if (inputColorCode > 0) { console.PopForeColor(); }
 		}
 		public string CURRENT;
 		void Update() {
-			string txt = _inputBuffer.ToString();
+			string txt = _keyBuffer.ToString();
 			if (string.IsNullOrEmpty(txt)) { return; }
-			_inputBuffer.Clear();
-			console.Write(txt, true);
-			//ResolveInput(true);
-			//WriteInputText(txt);
-			//CommandLineUpdate(txt);
-			Debug.Log("updated " + txt);
+			_keyBuffer.Clear();
+			WriteInputText(txt);
 		}
 		private void OnDisable() {
 			Debug.Log("disabled console input");

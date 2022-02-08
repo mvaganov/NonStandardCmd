@@ -69,7 +69,9 @@ namespace NonStandard.Cli {
 			i += amountToAdvance;
 		}
 		public void Write(string text) {
-			//StringBuilder whatWasWritten = new StringBuilder();
+			Write(text, null);
+		}
+		public void Write(string text, List<ConsoleArtifact> replaced) {
 			List<ConsoleTile> line;
 			for (int i = 0; i < text.Length; ++i) {
 				char c = text[i];
@@ -144,6 +146,9 @@ namespace NonStandard.Cli {
 					}
 					while (writeCursor.col + letterWidth > line.Count) { line.Add(currentDefaultTile); }
 					writeCursor.col += cursorSkip;
+					if (replaced != null) {
+						replaced.Add(new ConsoleArtifact(writeCursor, line[writeCursor.col]));
+					}
 					line[writeCursor.col] = thisLetter;
 					writeCursor.col += letterWidth;
 				}

@@ -5,6 +5,11 @@ namespace NonStandard.Cli {
 	public interface IDrawable {
 		void Draw(ConsoleTile[,] screen, Coord offset);
 	}
+	public struct ConsoleArtifact {
+		public Coord coord;
+		public ConsoleTile tile;
+		public ConsoleArtifact(Coord coord, ConsoleTile tile) { this.coord = coord; this.tile = tile; }
+	}
 	public struct ConsoleTile : IDrawable {
 		public char Letter;
 		public byte fore, back;
