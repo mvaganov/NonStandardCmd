@@ -297,10 +297,10 @@ namespace NonStandard.Cli {
 
 		public void Write(char c) { Write(c.ToString()); }
 		public void Write(object o) { Write(o.ToString()); }
-		public void Write(string text) { Write(text, false); }
-		public void Write(string text, bool isInput) {
+		public void Write(string text) { Write(text, false, null); }
+		public void Write(string text, bool isInput, List<ConsoleArtifact> out_replaced) {
 			Coord oldSize = body.Size;
-			body.Write(text);
+			body.Write(text, out_replaced);
 			Cursor = body.Cursor;
 			if (!isInput) {
 				body.RestartWriteCursor();

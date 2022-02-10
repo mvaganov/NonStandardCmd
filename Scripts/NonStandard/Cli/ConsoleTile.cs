@@ -5,10 +5,12 @@ namespace NonStandard.Cli {
 	public interface IDrawable {
 		void Draw(ConsoleTile[,] screen, Coord offset);
 	}
-	public struct ConsoleArtifact {
+	public struct ConsoleArtifact : IComparable<ConsoleArtifact> {
 		public Coord coord;
 		public ConsoleTile tile;
 		public ConsoleArtifact(Coord coord, ConsoleTile tile) { this.coord = coord; this.tile = tile; }
+		public int CompareTo(ConsoleArtifact other) => coord.CompareTo(other.coord);
+		public override int GetHashCode() => coord.GetHashCode();
 	}
 	public struct ConsoleTile : IDrawable {
 		public char Letter;
@@ -32,12 +34,14 @@ namespace NonStandard.Cli {
 
 		static ConsoleTile() {
 			DefaultTile = new ConsoleTile('?', Console.ForegroundColor, Console.BackgroundColor);
+			DeletedTile = new ConsoleTile('\b', 0, 0);
 		}
 
 		public ConsoleColor Fore { get => (ConsoleColor)fore; set => fore = (byte)value; }
 		public ConsoleColor Back { get => (ConsoleColor)back; set => back = (byte)value; }
 
 		public readonly static ConsoleTile DefaultTile;
+		public readonly static ConsoleTile DeletedTile;
 
 		public void Set(char letter, ConsoleColor foreColor, ConsoleColor backColor) {
 			this.Letter = letter; fore = (byte)foreColor; back = (byte)backColor;

@@ -12,8 +12,16 @@ namespace NonStandard.Cli {
 	[RequireComponent(typeof(UnityConsole)),RequireComponent(typeof(UserInput))]
 	public class UnityConsoleInput : MonoBehaviour {
 		private UnityConsole console;
+		/// <summary>
+		/// very short-term key storage, processed and added to the <see cref="_inputBuffer"/> each update
+		/// </summary>
 		protected StringBuilder _keyBuffer = new StringBuilder();
+		/// <summary>
+		/// the complete input phrase being entered right now; the complete command being typed.
+		/// </summary>
 		protected StringBuilder _inputBuffer = new StringBuilder();
+		protected List<ConsoleArtifact> _replaced = new List<ConsoleArtifact>();
+
 		protected int _indexInInputBuffer = 0;
 		/// <summary>
 		/// when a key was pressed
@@ -104,9 +112,9 @@ namespace NonStandard.Cli {
 			[Keyboard.current.downArrowKey] = new KMap(new Action(MoveCursorDown), null),
 			[Keyboard.current.rightArrowKey] = new KMap(new Action(MoveCursorRight), null),
 		};
-		public static bool IsShiftDown() { return Keyboard.current.shiftKey.isPressed; }
-		public static bool IsControlDown() { return Keyboard.current.ctrlKey.isPressed; }
-		public static bool IsAltDown() { return Keyboard.current.altKey.isPressed; }
+		public static bool IsShiftDown() { return Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed; }
+		public static bool IsControlDown() { return Keyboard.current.leftCtrlKey.isPressed || Keyboard.current.rightCtrlKey.isPressed; }
+		public static bool IsAltDown() { return Keyboard.current.leftAltKey.isPressed || Keyboard.current.rightAltKey.isPressed; }
 		/// <summary>
 		/// each of these should be prefixed by "<Keyboard>/"
 		/// </summary>
@@ -405,13 +413,26 @@ namespace NonStandard.Cli {
 			inputColorCode = console.AddConsoleColor(inputColor);
 			console.Write("testing");
 		}
+		private List<ConsoleArtifact> replacedThisWrite = new List<ConsoleArtifact>();
 		public void WriteInputText(string inputText) {
 			if (inputColorCode > 0) { console.PushForeColor((byte)inputColorCode); }
-			console.Write(inputText, true);
+			replacedThisWrite.Clear();
+			console.Write(inputText, true, replacedThisWrite);
+			UpdateReplacedList(replacedThisWrite);
 			_inputBuffer.Append(inputText);
 			if (inputColorCode > 0) { console.PopForeColor(); }
 		}
-		public string CURRENT;
+		private void UpdateReplacedList(List<ConsoleArtifact> replacedThisWrite) {
+			for (int i = 0; i < replacedThisWrite.Count; i++) {
+				ConsoleArtifact artifact = replacedThisWrite[i];
+				int index = _replaced.BinarySearchIndexOf(artifact);
+				if (index < 0) {
+					_replaced.Insert(~index, artifact);
+				} else {
+					_replaced[index] = artifact;
+				}
+			}
+		}
 		void Update() {
 			string txt = _keyBuffer.ToString();
 			if (string.IsNullOrEmpty(txt)) { return; }

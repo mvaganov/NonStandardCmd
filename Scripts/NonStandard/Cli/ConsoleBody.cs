@@ -68,9 +68,9 @@ namespace NonStandard.Cli {
 			}
 			i += amountToAdvance;
 		}
-		public void Write(string text) {
-			Write(text, null);
-		}
+		//public void Write(string text) {
+		//	Write(text, null);
+		//}
 		public void Write(string text, List<ConsoleArtifact> replaced) {
 			List<ConsoleTile> line;
 			for (int i = 0; i < text.Length; ++i) {
@@ -113,6 +113,10 @@ namespace NonStandard.Cli {
 						writeCursor.col += (short)(line.Count + 1);
 						printCharacter = false; // don't print, that will add a character to the end of the previous line
 					}
+					if (replaced != null) {
+						replaced.Add(new ConsoleArtifact(writeCursor, ConsoleTile.DeletedTile));
+					}
+
 					if (writeCursor.row < 0) { writeCursor.row = 0; }
 					if (IsAtOrBeforeStartingPoint()) {
 						printCharacter = false;
@@ -143,13 +147,16 @@ namespace NonStandard.Cli {
 						} else if (s >= line.Count) {
 							line.Add(currentDefaultTile);
 						}
+						if (replaced != null) {
+							replaced.Add(new ConsoleArtifact(new Coord(s, writeCursor.row), currentDefaultTile));
+						}
 					}
 					while (writeCursor.col + letterWidth > line.Count) { line.Add(currentDefaultTile); }
 					writeCursor.col += cursorSkip;
+					line[writeCursor.col] = thisLetter;
 					if (replaced != null) {
 						replaced.Add(new ConsoleArtifact(writeCursor, line[writeCursor.col]));
 					}
-					line[writeCursor.col] = thisLetter;
 					writeCursor.col += letterWidth;
 				}
 				if (writeCursor.col >= size.col) { size.col = (short)(writeCursor.col + 1); }
