@@ -20,10 +20,9 @@ namespace NonStandard.Cli {
 		public Coord writeCursor;
 		public Coord size;
 		public bool CursorAllowedInEmptyAreaInRow = false;
-		/// <summary>
-		/// if not negative one, the cursor cannot move before this coordinate
-		/// </summary>
-		public Coord WriteCursorStartingPoint = Coord.NegativeOne;
+
+		public ConsoleInput input = new ConsoleInput();
+
 		public Coord Cursor {
 			get => writeCursor;
 			set {
@@ -37,11 +36,7 @@ namespace NonStandard.Cli {
 				writeCursor.col = writeCursor.col.Clamp((short)0, limit.col);
 			}
 		}
-		public bool IsAtOrBeforeStartingPoint() {
-			return writeCursor.row < WriteCursorStartingPoint.row ||
-				writeCursor.row == WriteCursorStartingPoint.row && writeCursor.col <= WriteCursorStartingPoint.col;
-		}
-		public void RestartWriteCursor() { WriteCursorStartingPoint = Cursor; }
+		public void RestartWriteCursor() { input.WriteCursorStartingPoint = Cursor; }
 		public int CursorLeft { get => writeCursor.X; set => writeCursor.X = value; }
 		public int CursorTop { get => writeCursor.Y; set => writeCursor.Y = value; }
 		public Coord Size {
@@ -68,10 +63,8 @@ namespace NonStandard.Cli {
 			}
 			i += amountToAdvance;
 		}
-		//public void Write(string text) {
-		//	Write(text, null);
-		//}
-		public void Write(string text, List<ConsoleArtifact> replaced) {
+
+		public void Write(string text, List<ConsoleArtifact> ioDelta) {
 			List<ConsoleTile> line;
 			for (int i = 0; i < text.Length; ++i) {
 				char c = text[i];
@@ -86,12 +79,12 @@ namespace NonStandard.Cli {
 					//if(lines.Count == 0) { printC = false; break; }
 					line = lines[writeCursor.row];
 					// TODO check if there is a bunch of empty space and a tab. if so, delete all the way to the tab, including the tab
-					bool needToRediscover = false;
+					bool needToRediscoverWidth = false;
 					//Show.Log(writeCursor.col+" "+ line.Count + "         max:"+size.col);
 					if (writeCursor.col == line.Count) {
-						needToRediscover = writeCursor.col + 1 >= size.col;
+						needToRediscoverWidth = writeCursor.col + 1 >= size.col;
 						printCharacter = false; // don't print, that will add a character, we're removing a character
-						if (!IsAtOrBeforeStartingPoint()) {
+						if (!input.IsAtOrBeforeStartingPoint(Cursor)) {
 							if (line.Count == 0) {
 								if (writeCursor.row == lines.Count - 1) {
 									lines.RemoveAt(lines.Count - 1);
@@ -103,7 +96,7 @@ namespace NonStandard.Cli {
 						}
 					}
 					--writeCursor.col;
-					if (needToRediscover) {
+					if (needToRediscoverWidth) {
 						size.x = CalculateWidth();
 					}
 					while (writeCursor.col < 0) {
@@ -113,15 +106,16 @@ namespace NonStandard.Cli {
 						writeCursor.col += (short)(line.Count + 1);
 						printCharacter = false; // don't print, that will add a character to the end of the previous line
 					}
-					if (replaced != null) {
-						replaced.Add(new ConsoleArtifact(writeCursor, ConsoleTile.DeletedTile));
+					if (ioDelta != null) {
+						// remove
+						//replaced.Add(new ConsoleArtifact(writeCursor, ConsoleTile.DeletedTile));
 					}
 
 					if (writeCursor.row < 0) { writeCursor.row = 0; }
-					if (IsAtOrBeforeStartingPoint()) {
-						printCharacter = false;
+					if (input.IsAtOrBeforeStartingPoint(Cursor)) {
 						//Show.Log("there's probably a better algorithm for this. "+ writeCursor+" should be at "+ WriteCursorStartingPoint);
-						writeCursor = WriteCursorStartingPoint;
+						writeCursor = input.WriteCursorStartingPoint;
+						printCharacter = false;
 					}
 					break;
 				case '\n':
@@ -130,7 +124,7 @@ namespace NonStandard.Cli {
 					printCharacter = false; // don't print, that will add a character to the end of the line
 					break;
 				}
-				while (writeCursor.row >= lines.Count) { lines.Add(new List<ConsoleTile>()); }
+				EnsureSufficientLines(writeCursor.row + 1);
 				if (printCharacter) {
 					ConsoleTile thisLetter = GetPrintable(c, out short letterWidth, out short cursorSkip);
 					if(writeCursor.row >= lines.Count || writeCursor.row < 0) {
@@ -147,15 +141,15 @@ namespace NonStandard.Cli {
 						} else if (s >= line.Count) {
 							line.Add(currentDefaultTile);
 						}
-						if (replaced != null) {
-							replaced.Add(new ConsoleArtifact(new Coord(s, writeCursor.row), currentDefaultTile));
+						if (ioDelta != null) {
+							ioDelta.Add(new ConsoleArtifact(new Coord(s, writeCursor.row), currentDefaultTile));
 						}
 					}
 					while (writeCursor.col + letterWidth > line.Count) { line.Add(currentDefaultTile); }
 					writeCursor.col += cursorSkip;
 					line[writeCursor.col] = thisLetter;
-					if (replaced != null) {
-						replaced.Add(new ConsoleArtifact(writeCursor, line[writeCursor.col]));
+					if (ioDelta != null) {
+						ioDelta.Add(new ConsoleArtifact(writeCursor, line[writeCursor.col]));
 					}
 					writeCursor.col += letterWidth;
 				}
@@ -163,21 +157,24 @@ namespace NonStandard.Cli {
 			}
 			size.row = (short)Math.Max(lines.Count, Cursor.row + 1);
 		}
+
+		public void EnsureSufficientLines(int lineCount) {
+			while (lineCount > lines.Count) { lines.Add(new List<ConsoleTile>()); }
+		}
+
 		public int CalculateWidth() {
 			int w = 0;
-			for (int r = 0; r < lines.Count; ++r) {
-				if (lines[r].Count >= w) {
-					w = lines[r].Count;
-				}
-			}
+			lines.ForEach(line => w = Math.Max(w, line.Count));
 			return w;
 		}
+
 		public bool MoveCursor(Coord direction) {
 			Coord next = Cursor + direction;
 			if (next.x < 0 || next.y < 0 || next.y >= size.y || next.x >= size.x) { return false; }
 			Cursor = next;
 			return true;
 		}
+
 		/// <param name="c">character to print</param>
 		/// <param name="letterWidth">how far to move after printing the <see cref="ConsoleTile"/></param>
 		/// <param name="cursorSkip">how far to move before printing the <see cref="ConsoleTile"/></param>
@@ -211,6 +208,7 @@ namespace NonStandard.Cli {
 				return thisLetter;
 			}
 		}
+
 		public ConsoleTile GetAt(Coord cursor) {
 			if (cursor.row < 0 || cursor.row >= lines.Count || cursor.col < 0) {
 				return currentDefaultTile.CloneWithLetter('\0');
@@ -221,6 +219,29 @@ namespace NonStandard.Cli {
 			}
 			return line[cursor.col];
 		}
+
+		public void SetAt(Coord cursor, ConsoleTile tile) {
+			EnsureSufficientLines(cursor.row + 1);
+			List<ConsoleTile> line = lines[cursor.row];
+			while (line.Count <= cursor.col) { line.Add(currentDefaultTile); }
+			line[cursor.col] = tile;
+		}
+
+		public void InsertAt(Coord cursor, ConsoleTile tile) {
+			EnsureSufficientLines(cursor.row + 1);
+			List<ConsoleTile> line = lines[cursor.row];
+			while (line.Count < cursor.col) { line.Add(currentDefaultTile); }
+			line.Insert(cursor.col, tile);
+		}
+
+		public bool RemoveAt(Coord cursor) {
+			if (lines.Count <= cursor.row) return false;
+			List<ConsoleTile> line = lines[cursor.row];
+			if (line.Count <= cursor.col) { return false; }
+			line.RemoveAt(cursor.col);
+			return true;
+		}
+
 		public void Draw(CoordRect location, Coord offset) {
 			location.ForEach(c => {
 				ConsoleTile tile = GetAt(c - offset);

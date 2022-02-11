@@ -8,10 +8,16 @@ namespace NonStandard.Cli {
 	public struct ConsoleArtifact : IComparable<ConsoleArtifact> {
 		public Coord coord;
 		public ConsoleTile tile;
-		public ConsoleArtifact(Coord coord, ConsoleTile tile) { this.coord = coord; this.tile = tile; }
+		public ConsoleTile prev;
+		public ConsoleArtifact(Coord coord, ConsoleTile tile) : this(coord,tile,ConsoleTile.EmptyTile) {}
+		public ConsoleArtifact(Coord coord, ConsoleTile tile, ConsoleTile prev) {
+			this.coord = coord; this.tile = tile; this.prev = prev;
+		}
 		public int CompareTo(ConsoleArtifact other) => coord.CompareTo(other.coord);
 		public override int GetHashCode() => coord.GetHashCode();
+		public ConsoleArtifact WithDifferentTile(ConsoleTile a_tile) => new ConsoleArtifact(coord, a_tile, prev);
 	}
+
 	public struct ConsoleTile : IDrawable {
 		public char Letter;
 		public byte fore, back;
@@ -35,6 +41,7 @@ namespace NonStandard.Cli {
 		static ConsoleTile() {
 			DefaultTile = new ConsoleTile('?', Console.ForegroundColor, Console.BackgroundColor);
 			DeletedTile = new ConsoleTile('\b', 0, 0);
+			EmptyTile = new ConsoleTile('\0', 0, 0);
 		}
 
 		public ConsoleColor Fore { get => (ConsoleColor)fore; set => fore = (byte)value; }
@@ -42,6 +49,7 @@ namespace NonStandard.Cli {
 
 		public readonly static ConsoleTile DefaultTile;
 		public readonly static ConsoleTile DeletedTile;
+		public readonly static ConsoleTile EmptyTile;
 
 		public void Set(char letter, ConsoleColor foreColor, ConsoleColor backColor) {
 			this.Letter = letter; fore = (byte)foreColor; back = (byte)backColor;

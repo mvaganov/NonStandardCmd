@@ -295,6 +295,10 @@ namespace NonStandard.Cli {
 			//Show.Log(body.Cursor);
 		}
 
+		public void SetAt(Coord position, ConsoleTile tile) {
+			body.SetAt(position, tile);
+		}
+
 		public void Write(char c) { Write(c.ToString()); }
 		public void Write(object o) { Write(o.ToString()); }
 		public void Write(string text) { Write(text, false, null); }
