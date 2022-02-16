@@ -20,7 +20,7 @@ namespace NonStandard.Cli {
 		/// the complete input phrase being entered right now; the complete command being typed.
 		/// </summary>
 		protected StringBuilder _inputBuffer = new StringBuilder();
-		protected List<ConsoleArtifact> _replaced = new List<ConsoleArtifact>();
+		protected List<ConsoleDiffUnit> _replaced = new List<ConsoleDiffUnit>();
 
 		protected int _indexInInputBuffer = 0;
 		/// <summary>
@@ -240,7 +240,7 @@ namespace NonStandard.Cli {
 			_keyBuffer.Clear();
 			_indexInInputBuffer = 0;
 			console.Write("\n");
-			console.body.RestartWriteCursor();
+			RestartInput();
 			if (string.IsNullOrEmpty(processedInput)) { return; }
 		}
 #if UNITY_EDITOR
@@ -275,7 +275,7 @@ namespace NonStandard.Cli {
 		public void ShiftWindowDown() { MovWin(Coord.Down); }
 		public void ShiftWindowRight() { MovWin(Coord.Right); }
 		private int AddStr(StringBuilder sb, int index, string str) {
-			Debug.Log("buffer index: "+index);
+			//Debug.Log("buffer index: "+index);
 			if (index >= sb.Length) {
 				sb.Append(str);
 			} else {
@@ -284,7 +284,7 @@ namespace NonStandard.Cli {
 			return str.Length;
 		}
 		private int ProcessKeyMappedTarget(object context, StringBuilder sb, int index, bool alsoResolveNonText = true) {
-			Debug.Log(context);
+			//Debug.Log(context);
 			if (index < 0) { index = sb.Length + 1 + index; }
 			switch (context) {
 				case char c:      return AddStr(sb, index, c.ToString());
@@ -332,32 +332,37 @@ namespace NonStandard.Cli {
 			inputColorCode = console.AddConsoleColor(inputColor);
 			console.Write("testing");
 		}
-
-		private List<ConsoleArtifact> replacedThisWrite = new List<ConsoleArtifact>();
+		public void RestartInput() {
+			inputIndex = 0;
+			input.Start = console.body.writeCursor;
+		}
+		ConsoleDiff input = new ConsoleDiff();
 		public void WriteInputText(string inputText) {
 			if (inputColorCode > 0) { console.PushForeColor((byte)inputColorCode); }
-			replacedThisWrite.Clear();
-			console.Write(inputText, true, replacedThisWrite);
-			UpdateReplacedList(replacedThisWrite);
+			console.Write(inputText, input, ref inputIndex);
+			//UpdateReplacedList(replacedThisWrite);
 			_inputBuffer.Append(inputText);
 			if (inputColorCode > 0) { console.PopForeColor(); }
 		}
-		private void UpdateReplacedList(List<ConsoleArtifact> replacedThisWrite) {
-			for (int i = 0; i < replacedThisWrite.Count; i++) {
-				ConsoleArtifact artifact = replacedThisWrite[i];
-				int index = _replaced.BinarySearchIndexOf(artifact);
-				if (index < 0) {
-					_replaced.Insert(~index, artifact);
-				} else {
-					_replaced[index] = artifact;
-				}
-			}
-		}
+		//private void UpdateReplacedList(List<ConsoleDiffUnit> replacedThisWrite) {
+		//	for (int i = 0; i < replacedThisWrite.Count; i++) {
+		//		ConsoleDiffUnit artifact = replacedThisWrite[i];
+		//		int index = _replaced.BinarySearchIndexOf(artifact);
+		//		if (index < 0) {
+		//			_replaced.Insert(~index, artifact);
+		//		} else {
+		//			_replaced[index] = artifact;
+		//		}
+		//	}
+		//}
+		public int inputIndex;
+		public bool isValidInputIndex;
 		void Update() {
 			string txt = _keyBuffer.ToString();
 			if (string.IsNullOrEmpty(txt)) { return; }
 			_keyBuffer.Clear();
 			WriteInputText(txt);
+			isValidInputIndex = input.TryGetIndexOf(console.body.writeCursor, out inputIndex);
 		}
 		private void OnDisable() {
 			Debug.Log("disabled console input");

@@ -301,13 +301,16 @@ namespace NonStandard.Cli {
 
 		public void Write(char c) { Write(c.ToString()); }
 		public void Write(object o) { Write(o.ToString()); }
-		public void Write(string text) { Write(text, false, null); }
-		public void Write(string text, bool isInput, List<ConsoleArtifact> out_replaced) {
+		public void Write(string text) { int a = 0; Write(text, null, ref a); }
+		public void Write(string text, ConsoleDiff input, ref int inputIndex) {
 			Coord oldSize = body.Size;
-			body.Write(text, out_replaced);
+			if (input != null && input.Start == Coord.NegativeOne) {
+				input.Start = body.writeCursor;
+			}
+			body.Write(text, input, ref inputIndex);
 			Cursor = body.Cursor;
-			if (!isInput) {
-				body.RestartWriteCursor();
+			if (input == null) {
+				//body.RestartWriteCursor();
 			}
 			//window.rect.MoveToContain(body.Cursor);
 			if (body.Size != oldSize) {

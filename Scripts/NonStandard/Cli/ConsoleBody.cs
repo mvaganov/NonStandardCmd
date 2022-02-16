@@ -21,7 +21,10 @@ namespace NonStandard.Cli {
 		public Coord size;
 		public bool CursorAllowedInEmptyAreaInRow = false;
 
-		public ConsoleInput input = new ConsoleInput();
+//		public bool isValidInputIndex;
+//		private int inputIndex;
+
+//		public ConsoleDiff input = new ConsoleDiff();
 
 		public Coord Cursor {
 			get => writeCursor;
@@ -34,9 +37,10 @@ namespace NonStandard.Cli {
 					limit.col = (short)(writeCursor.row < lines.Count && writeCursor.row >= 0 ? lines[writeCursor.row].Count : 0);
 				}
 				writeCursor.col = writeCursor.col.Clamp((short)0, limit.col);
+//				isValidInputIndex = input.TryGetIndexOf(writeCursor, out inputIndex);
 			}
 		}
-		public void RestartWriteCursor() { input.WriteCursorStartingPoint = Cursor; }
+//		public void RestartWriteCursor() { input.Start = Cursor; }
 		public int CursorLeft { get => writeCursor.X; set => writeCursor.X = value; }
 		public int CursorTop { get => writeCursor.Y; set => writeCursor.Y = value; }
 		public Coord Size {
@@ -64,65 +68,73 @@ namespace NonStandard.Cli {
 			i += amountToAdvance;
 		}
 
-		public void Write(string text, List<ConsoleArtifact> ioDelta) {
+		private void ConsoleBackspace() {
+			List<ConsoleTile> line = lines[writeCursor.row];
+			if (writeCursor.col == line.Count) {
+				if (line.Count == 0) {
+					if (writeCursor.row == lines.Count - 1) {
+						lines.RemoveAt(lines.Count - 1);
+						size.row = (short)lines.Count;
+					}
+				} else {
+					line.RemoveAt(line.Count - 1);
+					if (writeCursor.col + 1 >= size.col) {
+						size.x = CalculateWidth();
+					}
+				}
+			}
+			--writeCursor.col;
+			while (writeCursor.col < 0) {
+				if (writeCursor.row <= 0) { writeCursor.col = writeCursor.row = 0; break; }
+				--writeCursor.row;
+				line = lines[writeCursor.row];
+				if (line.Count > 0) {
+					writeCursor.col += (short)(line.Count);
+				}
+			}
+			if (writeCursor.row < 0) { writeCursor.row = 0; }
+		}
+
+		public void Write(string text, ConsoleDiff diff, ref int inputIndex) {
 			List<ConsoleTile> line;
+			if (diff != null && diff.Start == Coord.NegativeOne) {
+				diff.Start = writeCursor;
+				UnityEngine.Debug.LogWarning("...needed to initialize diff.Start...");
+			}
+			UnityEngine.Debug.Log("writing \'" + text + "\' at " + inputIndex + " " + writeCursor + "   " + diff);
 			for (int i = 0; i < text.Length; ++i) {
 				char c = text[i];
 				bool printCharacter = true;
 				switch (c) {
-				case Col.ColorSequenceDelim:
-					ParseColorSequenceDelimeter(text, ref i, out byte f, out byte b);
-					currentDefaultTile.fore = (f == Col.DefaultColorIndex) ? defaultColors.fore : f;
-					currentDefaultTile.back = (b == Col.DefaultColorIndex) ? defaultColors.back : b;
-					continue;
-				case '\b':
-					//if(lines.Count == 0) { printC = false; break; }
-					line = lines[writeCursor.row];
-					// TODO check if there is a bunch of empty space and a tab. if so, delete all the way to the tab, including the tab
-					bool needToRediscoverWidth = false;
-					//Show.Log(writeCursor.col+" "+ line.Count + "         max:"+size.col);
-					if (writeCursor.col == line.Count) {
-						needToRediscoverWidth = writeCursor.col + 1 >= size.col;
-						printCharacter = false; // don't print, that will add a character, we're removing a character
-						if (!input.IsAtOrBeforeStartingPoint(Cursor)) {
-							if (line.Count == 0) {
-								if (writeCursor.row == lines.Count - 1) {
-									lines.RemoveAt(lines.Count - 1);
-									size.row = (short)lines.Count;
-								}
-							} else {
-								line.RemoveAt(line.Count - 1);
+					case Col.ColorSequenceDelim:
+						ParseColorSequenceDelimeter(text, ref i, out byte f, out byte b);
+						currentDefaultTile.fore = (f == Col.DefaultColorIndex) ? defaultColors.fore : f;
+						currentDefaultTile.back = (b == Col.DefaultColorIndex) ? defaultColors.back : b;
+						continue;
+					case '\b':
+						if (diff != null) {
+							if (inputIndex > 0) {
+								--inputIndex;
+								diff.RemoveAt(inputIndex, this);
+								writeCursor = diff.GetCoord(inputIndex);
+								UnityEngine.Debug.Log(writeCursor + " <- new writecursor, index " + inputIndex + " after backspace");
 							}
+						} else {
+							ConsoleBackspace();
 						}
-					}
-					--writeCursor.col;
-					if (needToRediscoverWidth) {
-						size.x = CalculateWidth();
-					}
-					while (writeCursor.col < 0) {
-						if (writeCursor.row <= 0) { writeCursor.col = writeCursor.row = 0; break; }
-						--writeCursor.row;
-						line = lines[writeCursor.row];
-						writeCursor.col += (short)(line.Count + 1);
-						printCharacter = false; // don't print, that will add a character to the end of the previous line
-					}
-					if (ioDelta != null) {
-						// remove
-						//replaced.Add(new ConsoleArtifact(writeCursor, ConsoleTile.DeletedTile));
-					}
-
-					if (writeCursor.row < 0) { writeCursor.row = 0; }
-					if (input.IsAtOrBeforeStartingPoint(Cursor)) {
-						//Show.Log("there's probably a better algorithm for this. "+ writeCursor+" should be at "+ WriteCursorStartingPoint);
-						writeCursor = input.WriteCursorStartingPoint;
 						printCharacter = false;
-					}
-					break;
-				case '\n':
-					++writeCursor.row;
-					writeCursor.col = 0;
-					printCharacter = false; // don't print, that will add a character to the end of the line
-					break;
+						break;
+					case '\n':
+						++writeCursor.row;
+						writeCursor.col = 0;
+						printCharacter = false; // don't print, that will add a character to the end of the line
+						if (diff != null) {
+							diff.Insert(inputIndex, currentDefaultTile.CloneWithLetter('\n'), this);
+							++inputIndex;
+							writeCursor = diff.GetCoord(inputIndex);
+							UnityEngine.Debug.Log(writeCursor + " <- new writecursor, index " + inputIndex + " after newline");
+						}
+						break;
 				}
 				EnsureSufficientLines(writeCursor.row + 1);
 				if (printCharacter) {
@@ -141,17 +153,23 @@ namespace NonStandard.Cli {
 						} else if (s >= line.Count) {
 							line.Add(currentDefaultTile);
 						}
-						if (ioDelta != null) {
-							ioDelta.Add(new ConsoleArtifact(new Coord(s, writeCursor.row), currentDefaultTile));
-						}
+						//if (diff != null) {
+						//	diff.Insert(inputIndex, currentDefaultTile, this);
+						//	//ioDelta.Add(new ConsoleArtifact(new Coord(s, writeCursor.row), currentDefaultTile));
+						//}
 					}
 					while (writeCursor.col + letterWidth > line.Count) { line.Add(currentDefaultTile); }
+					if (diff != null) {
+						diff.Insert(inputIndex, thisLetter, this);
+						++inputIndex;
+						//writeCursor = diff.GetCoord(inputIndex);
+						//UnityEngine.Debug.Log(writeCursor + " '" + thisLetter + "' <- new writecursor, index "+ inputIndex+ " ");
+					}
+					//else {
 					writeCursor.col += cursorSkip;
 					line[writeCursor.col] = thisLetter;
-					if (ioDelta != null) {
-						ioDelta.Add(new ConsoleArtifact(writeCursor, line[writeCursor.col]));
-					}
 					writeCursor.col += letterWidth;
+					//}
 				}
 				if (writeCursor.col >= size.col) { size.col = (short)(writeCursor.col + 1); }
 			}
@@ -222,6 +240,7 @@ namespace NonStandard.Cli {
 
 		public void SetAt(Coord cursor, ConsoleTile tile) {
 			EnsureSufficientLines(cursor.row + 1);
+			//UnityEngine.Debug.Log("getting row " + cursor.row + " of " + lines.Count);
 			List<ConsoleTile> line = lines[cursor.row];
 			while (line.Count <= cursor.col) { line.Add(currentDefaultTile); }
 			line[cursor.col] = tile;

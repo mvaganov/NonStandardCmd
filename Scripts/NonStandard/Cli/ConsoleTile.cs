@@ -5,18 +5,6 @@ namespace NonStandard.Cli {
 	public interface IDrawable {
 		void Draw(ConsoleTile[,] screen, Coord offset);
 	}
-	public struct ConsoleArtifact : IComparable<ConsoleArtifact> {
-		public Coord coord;
-		public ConsoleTile tile;
-		public ConsoleTile prev;
-		public ConsoleArtifact(Coord coord, ConsoleTile tile) : this(coord,tile,ConsoleTile.EmptyTile) {}
-		public ConsoleArtifact(Coord coord, ConsoleTile tile, ConsoleTile prev) {
-			this.coord = coord; this.tile = tile; this.prev = prev;
-		}
-		public int CompareTo(ConsoleArtifact other) => coord.CompareTo(other.coord);
-		public override int GetHashCode() => coord.GetHashCode();
-		public ConsoleArtifact WithDifferentTile(ConsoleTile a_tile) => new ConsoleArtifact(coord, a_tile, prev);
-	}
 
 	public struct ConsoleTile : IDrawable {
 		public char Letter;
@@ -80,4 +68,28 @@ namespace NonStandard.Cli {
 		public ConsoleTile CloneWithLetter(char letter) => new ConsoleTile(letter, Fore, Back);
 	}
 
+	/// <summary>
+	/// used to make reversable changes to a console body. the input system uses this.
+	/// </summary>
+	public struct ConsoleDiffUnit : IComparable<ConsoleDiffUnit> {
+		public Coord coord; // where "here" is
+		public ConsoleTile next; // the next value being placed here
+		public ConsoleTile prev; // what used to be here
+		public ConsoleDiffUnit(Coord coord, ConsoleTile tile) : this(coord, tile, ConsoleTile.EmptyTile) { }
+		public ConsoleDiffUnit(Coord coord, ConsoleTile tile, ConsoleTile prev) {
+			this.coord = coord; this.next = tile; this.prev = prev;
+			Validate();
+		}
+		public int CompareTo(ConsoleDiffUnit other) => coord.CompareTo(other.coord);
+		public override int GetHashCode() => coord.GetHashCode();
+		public ConsoleDiffUnit WithDifferentTile(ConsoleTile a_tile) => new ConsoleDiffUnit(coord, a_tile, prev);
+		public ConsoleDiffUnit WithDifferentCoord(Coord coord) => new ConsoleDiffUnit(coord, next, prev);
+		public void OffsetCoord(Coord coord) { this.coord += coord; Validate(); }
+
+		private void Validate() {
+			if (coord.row < 0 || coord.col < 0) {
+				throw new Exception("something created an OOB diff unit...");
+			}
+		}
+	}
 }
