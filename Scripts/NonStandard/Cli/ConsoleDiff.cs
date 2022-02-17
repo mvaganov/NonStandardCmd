@@ -18,13 +18,14 @@ namespace NonStandard.Cli {
 		/// <summary>
 		/// returns how many characters were changed after the given index
 		/// </summary>
-		public void Insert(int index, ConsoleTile tile, ConsoleBody body) {
+		public void Insert(int index, ConsoleTile tile, ConsoleBody body, ref Coord Cursor) {
 			if (tile.Letter == '\n') {
 				InsertNewline(index, body);
 				if (!inputArea.IsValid) {
-					body.Cursor = new Coord(0, body.Cursor.y + 1);
+					Cursor = new Coord(0, Cursor.y + 1);
+					UnityEngine.Debug.Log("cursor is beyond acceptible area");
 				} else {
-					body.Cursor = new Coord(inputArea.min.col, body.Cursor.y + 1);
+					Cursor = new Coord(inputArea.min.col, Cursor.y + 1);
 				}
 				return;
 			}
@@ -33,19 +34,20 @@ namespace NonStandard.Cli {
 			int indexAtEndOfLine = index + tilesRemainingInRow;
 			Coord coordOfIndex = GetCoord(index);
 			Coord endPoint = coordOfIndex + (Coord.Right * tilesRemainingInRow);
+			UnityEngine.Debug.Log("inserting " + tile + " @" + coordOfIndex + ":" + index + "/" + input.Count);
 			input.Insert(index, new ConsoleDiffUnit(coordOfIndex, tile, body.GetAt(coordOfIndex)));
 			for (int i = indexAtEndOfLine; i > index; --i) {
 				input[i].OffsetCoord(Coord.Right);
 			}
 			//input[index] = input[index].WithDifferentTile(tile);
-			body.Cursor += Coord.Right;
+			Cursor += Coord.Right;
 			if (!inputArea.IsValid) {
-				if (body.Cursor.col >= body.size.col) {
-					body.Cursor = new Coord(0, body.Cursor.y + 1);
+				if (Cursor.col >= body.size.col) {
+					Cursor = new Coord(0, Cursor.y + 1);
 				}
 			} else {
-				if (body.Cursor.col >= inputArea.max.col) {
-					body.Cursor = new Coord(inputArea.min.col, body.Cursor.y + 1);
+				if (Cursor.col >= inputArea.max.col) {
+					Cursor = new Coord(inputArea.min.col, Cursor.y + 1);
 				}
 			}
 			WriteNext(body, index, tilesRemainingInRow + 1);

@@ -17,7 +17,7 @@ namespace NonStandard.Cli {
 		/// </summary>
 		public Dictionary<char, char> printableCharacters = new Dictionary<char, char>();
 		public List<List<ConsoleTile>> lines = new List<List<ConsoleTile>>();
-		public Coord writeCursor;
+//		public Coord writeCursor;
 		public Coord size;
 		public bool CursorAllowedInEmptyAreaInRow = false;
 
@@ -26,28 +26,28 @@ namespace NonStandard.Cli {
 
 //		public ConsoleDiff input = new ConsoleDiff();
 
-		public Coord Cursor {
-			get => writeCursor;
-			set {
-				writeCursor = value;
-				Coord limit = size;
-				if(limit.row < 1) { limit.row = 1; }
-				writeCursor.row = writeCursor.row.Clamp((short)0, (short)(limit.row - 1));
-				if (!CursorAllowedInEmptyAreaInRow) {
-					limit.col = (short)(writeCursor.row < lines.Count && writeCursor.row >= 0 ? lines[writeCursor.row].Count : 0);
-				}
-				writeCursor.col = writeCursor.col.Clamp((short)0, limit.col);
-//				isValidInputIndex = input.TryGetIndexOf(writeCursor, out inputIndex);
-			}
-		}
+//		public Coord Cursor {
+//			get => writeCursor;
+//			set {
+//				writeCursor = value;
+//				Coord limit = size;
+//				if(limit.row < 1) { limit.row = 1; }
+//				writeCursor.row = writeCursor.row.Clamp((short)0, (short)(limit.row - 1));
+//				if (!CursorAllowedInEmptyAreaInRow) {
+//					limit.col = (short)(writeCursor.row < lines.Count && writeCursor.row >= 0 ? lines[writeCursor.row].Count : 0);
+//				}
+//				writeCursor.col = writeCursor.col.Clamp((short)0, limit.col);
+////				isValidInputIndex = input.TryGetIndexOf(writeCursor, out inputIndex);
+//			}
+//		}
 //		public void RestartWriteCursor() { input.Start = Cursor; }
-		public int CursorLeft { get => writeCursor.X; set => writeCursor.X = value; }
-		public int CursorTop { get => writeCursor.Y; set => writeCursor.Y = value; }
+		//public int CursorLeft { get => writeCursor.X; set => writeCursor.X = value; }
+		//public int CursorTop { get => writeCursor.Y; set => writeCursor.Y = value; }
 		public Coord Size {
 			get => size;
 		}
 		public void Clear() {
-			Cursor = Coord.Zero;
+//			Cursor = Coord.Zero;
 			size = Coord.Zero;
 			lines.Clear();
 		}
@@ -68,7 +68,7 @@ namespace NonStandard.Cli {
 			i += amountToAdvance;
 		}
 
-		private void ConsoleBackspace() {
+		private void ConsoleBackspace(ref Coord writeCursor) {
 			List<ConsoleTile> line = lines[writeCursor.row];
 			if (writeCursor.col == line.Count) {
 				if (line.Count == 0) {
@@ -95,7 +95,7 @@ namespace NonStandard.Cli {
 			if (writeCursor.row < 0) { writeCursor.row = 0; }
 		}
 
-		public void Write(string text, ConsoleDiff diff, ref int inputIndex) {
+		public void Write(string text, ConsoleDiff diff, ref int inputIndex, ref Coord writeCursor) {
 			List<ConsoleTile> line;
 			if (diff != null && diff.Start == Coord.NegativeOne) {
 				diff.Start = writeCursor;
@@ -120,7 +120,7 @@ namespace NonStandard.Cli {
 								UnityEngine.Debug.Log(writeCursor + " <- new writecursor, index " + inputIndex + " after backspace");
 							}
 						} else {
-							ConsoleBackspace();
+							ConsoleBackspace(ref writeCursor);
 						}
 						printCharacter = false;
 						break;
@@ -129,7 +129,7 @@ namespace NonStandard.Cli {
 						writeCursor.col = 0;
 						printCharacter = false; // don't print, that will add a character to the end of the line
 						if (diff != null) {
-							diff.Insert(inputIndex, currentDefaultTile.CloneWithLetter('\n'), this);
+							diff.Insert(inputIndex, currentDefaultTile.CloneWithLetter('\n'), this, ref writeCursor);
 							++inputIndex;
 							writeCursor = diff.GetCoord(inputIndex);
 							UnityEngine.Debug.Log(writeCursor + " <- new writecursor, index " + inputIndex + " after newline");
@@ -138,7 +138,7 @@ namespace NonStandard.Cli {
 				}
 				EnsureSufficientLines(writeCursor.row + 1);
 				if (printCharacter) {
-					ConsoleTile thisLetter = GetPrintable(c, out short letterWidth, out short cursorSkip);
+					ConsoleTile thisLetter = GetPrintable(c, writeCursor, out short letterWidth, out short cursorSkip);
 					if(writeCursor.row >= lines.Count || writeCursor.row < 0) {
 						throw new Exception("bad write cursor state "+writeCursor+" with "+lines.Count+" rows");
 					}
@@ -160,20 +160,26 @@ namespace NonStandard.Cli {
 					}
 					while (writeCursor.col + letterWidth > line.Count) { line.Add(currentDefaultTile); }
 					if (diff != null) {
-						diff.Insert(inputIndex, thisLetter, this);
+						diff.Insert(inputIndex, thisLetter, this, ref writeCursor);
 						++inputIndex;
 						//writeCursor = diff.GetCoord(inputIndex);
 						//UnityEngine.Debug.Log(writeCursor + " '" + thisLetter + "' <- new writecursor, index "+ inputIndex+ " ");
 					}
 					else {
 						writeCursor.col += cursorSkip;
-						line[writeCursor.col] = thisLetter;
+						if (writeCursor.col < line.Count) {
+							line[writeCursor.col] = thisLetter;
+						} else if (writeCursor.col == line.Count) {
+							line.Add(thisLetter);
+						} else {
+							throw new Exception("Unable to add letter beyond the length of the line!");
+						}
 						writeCursor.col += letterWidth;
 					}
 				}
 				if (writeCursor.col >= size.col) { size.col = (short)(writeCursor.col + 1); }
 			}
-			size.row = (short)Math.Max(lines.Count, Cursor.row + 1);
+			size.row = (short)Math.Max(lines.Count, writeCursor.row + 1);
 		}
 
 		public void EnsureSufficientLines(int lineCount) {
@@ -186,7 +192,7 @@ namespace NonStandard.Cli {
 			return w;
 		}
 
-		public bool MoveCursor(Coord direction) {
+		public bool MoveCursor(Coord direction, ref Coord Cursor) {
 			Coord next = Cursor + direction;
 			if (next.x < 0 || next.y < 0 || next.y >= size.y || next.x >= size.x) { return false; }
 			Cursor = next;
@@ -197,7 +203,7 @@ namespace NonStandard.Cli {
 		/// <param name="letterWidth">how far to move after printing the <see cref="ConsoleTile"/></param>
 		/// <param name="cursorSkip">how far to move before printing the <see cref="ConsoleTile"/></param>
 		/// <returns></returns>
-		public ConsoleTile GetPrintable(char c, out short letterWidth, out short cursorSkip) {
+		public ConsoleTile GetPrintable(char c, Coord Cursor, out short letterWidth, out short cursorSkip) {
 			ConsoleTile thisLetter = currentDefaultTile;
 			cursorSkip = 0;
 			switch (c) {
@@ -207,7 +213,7 @@ namespace NonStandard.Cli {
 				return thisLetter;
 			case '\t':
 				thisLetter.Set('t', currentDefaultTile.Back, currentDefaultTile.Fore);
-				letterWidth = (short)(spacesPerTab - (writeCursor.col % spacesPerTab));//1;//
+				letterWidth = (short)(spacesPerTab - (Cursor.col % spacesPerTab));//1;//
 				//cursorSkip = (short)(spacesPerTab - (writeCursor.col % spacesPerTab) - 1);
 				return thisLetter;
 			default:

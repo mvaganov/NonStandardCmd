@@ -121,7 +121,7 @@ namespace NonStandard.Cli {
 		}
 
 		private void RefreshCursorValid() {
-			isValidInputIndex = input.TryGetIndexOf(console.body.writeCursor, out inputIndex);
+			console.cursor.validInputIndex = input.TryGetIndexOf(console.Cursor, out console.cursor.indexInInput);
 		}
 
 		private void MovWin(Coord dir) { console.ScrollRenderWindow(dir); }
@@ -256,12 +256,12 @@ namespace NonStandard.Cli {
 			console.Write("testing");
 		}
 		public void RestartInput() {
-			inputIndex = 0;
-			input.Start = console.body.writeCursor;
+			console.cursor.indexInInput = 0;
+			input.Start = console.Cursor;
 		}
 		public void WriteInputText(string inputText) {
 			if (inputColorCode > 0) { console.PushForeColor((byte)inputColorCode); }
-			console.Write(inputText, input, ref inputIndex);
+			console.Write(inputText, input, ref console.cursor.indexInInput);
 			//UpdateReplacedList(replacedThisWrite);
 			_inputBuffer.Append(inputText);
 			if (inputColorCode > 0) { console.PopForeColor(); }
@@ -278,8 +278,6 @@ namespace NonStandard.Cli {
 		//	}
 		//}
 		ConsoleDiff input = new ConsoleDiff();
-		public int inputIndex;
-		public bool isValidInputIndex;
 		void Update() {
 			string txt = _keyBuffer.ToString();
 			if (string.IsNullOrEmpty(txt)) { return; }
