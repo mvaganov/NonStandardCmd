@@ -117,99 +117,20 @@ namespace NonStandard.Cli {
 		public static bool IsAltDown() { return Keyboard.current.leftAltKey.isPressed || Keyboard.current.rightAltKey.isPressed; }
 		private void MovCur(Coord dir) {
 			console.Cursor += dir;
+			RefreshCursorValid();
 		}
-		//private void MovCur(Coord dir) {
-		//	if (_inputBuffer.Length == 0) {
-		//		console.Cursor += dir;
-		//		return;
-		//	}
-		//	switch (dir.x) {
-		//		case +1:
-		//			if (_indexInInputBuffer >= _inputBuffer.Length) {
-		//				break;
-		//			}
-		//			if (_inputBuffer[_indexInInputBuffer] == '\n') {
-		//				if (_inputArea.IsValid) {
-		//					console.Cursor = new Coord(_inputArea.Min.x, console.Cursor.y + 1);
-		//				} else {
-		//					console.Cursor = new Coord(0, console.Cursor.y + 1);
-		//				}
-		//			} else {
-		//				if (_inputArea.IsValid) {
-		//					if (console.Cursor.x < _inputArea.Max.x) {
-		//						console.Cursor += dir;
-		//					} else {
-		//						console.Cursor = new Coord(_inputArea.Min.x, console.Cursor.y + 1);
-		//					}
-		//				} else if (console.Cursor.x < console.Window.Width - 1) {
-		//					console.Cursor += dir;
-		//				} else {
-		//					console.Cursor = new Coord(0, console.Cursor.y + 1);
-		//				}
-		//			}
-		//			++_indexInInputBuffer;
-		//			break;
-		//		case -1:
-		//			if (_indexInInputBuffer <= 0) {
-		//				break;
-		//			}
-		//			--_indexInInputBuffer;
-		//			if (_inputBuffer[_indexInInputBuffer] == '\n') {
-		//				int column = HowManyCharsBackBeforeTheLineStarts(_indexInInputBuffer);
-		//				if (_inputArea.IsValid) {
-		//					console.Cursor = new Coord(_inputArea.Min.x + column, console.Cursor.y - 1);
-		//				} else {
-		//					console.Cursor = new Coord(column, console.Cursor.y - 1);
-		//				}
-		//			} else {
-		//				if (_inputArea.IsValid) {
-		//					if (console.Cursor.x > _inputArea.Min.x) {
-		//						console.Cursor += dir;
-		//					} else {
-		//						console.Cursor = new Coord(_inputArea.Max.x - 1, console.Cursor.y - 1);
-		//					}
-		//				} else if (console.Cursor.x > 0) {
-		//					console.Cursor += dir;
-		//				} else {
-		//					console.Cursor = new Coord(console.Window.Width - 1, console.Cursor.y - 1);
-		//				}
-		//			}
-		//			break;
-		//		case 0:
-		//			Coord target = console.Cursor + dir;
-		//			switch (dir.y) {
-		//				case -1:
-		//					while (_indexInInputBuffer >= 0) {
-		//						MovCur(Coord.Left);
-		//						if (console.Cursor.y == target.y) {
-		//							if (console.Cursor.x <= target.x) {
-		//								break;
-		//							}
-		//						}
-		//					}
-		//					break;
-		//				case +1:
-		//					while (_indexInInputBuffer <= _inputBuffer.Length) {
-		//						MovCur(Coord.Right);
-		//						if (console.Cursor.y == target.y) {
-		//							if (console.Cursor.x == target.x) {
-		//								break;
-		//							}
-		//						} else if (console.Cursor.y > target.y) {
-		//							MovCur(Coord.Left);
-		//							break;
-		//						}
-		//					}
-		//					break;
-		//			}
-		//			break;
-		//	}
-		//}
-		private void MovWin(Coord dir) { console.ScrollRenderWindow(dir); ; }
+
+		private void RefreshCursorValid() {
+			isValidInputIndex = input.TryGetIndexOf(console.body.writeCursor, out inputIndex);
+		}
+
+		private void MovWin(Coord dir) { console.ScrollRenderWindow(dir); }
+
 		public void PasteFromClipboard() {
 			_pastedText = GUIUtility.systemCopyBuffer.Replace("\r","");
 			_keyBuffer.Append(_pastedText);
 		}
+
 		public void CopyToClipboard() {
 			Show.Log("copy mechanism from Input should be working automatically: " + GUIUtility.systemCopyBuffer.StringifySmall());
 		}
@@ -234,6 +155,7 @@ namespace NonStandard.Cli {
 			}
 			return finalString.ToString();
 		}
+
 		public void FinishCurrentInput() {
 			string processedInput = ProcessInput(_keyBuffer.ToString());
 			//Show.Log(_inputBuffer.ToString().StringifySmall()+" -> "+processedInput.StringifySmall());
@@ -243,6 +165,7 @@ namespace NonStandard.Cli {
 			RestartInput();
 			if (string.IsNullOrEmpty(processedInput)) { return; }
 		}
+
 #if UNITY_EDITOR
 		private void Reset() {
 			UnityConsole console = GetComponent<UnityConsole>();
@@ -336,7 +259,6 @@ namespace NonStandard.Cli {
 			inputIndex = 0;
 			input.Start = console.body.writeCursor;
 		}
-		ConsoleDiff input = new ConsoleDiff();
 		public void WriteInputText(string inputText) {
 			if (inputColorCode > 0) { console.PushForeColor((byte)inputColorCode); }
 			console.Write(inputText, input, ref inputIndex);
@@ -355,6 +277,7 @@ namespace NonStandard.Cli {
 		//		}
 		//	}
 		//}
+		ConsoleDiff input = new ConsoleDiff();
 		public int inputIndex;
 		public bool isValidInputIndex;
 		void Update() {
@@ -362,7 +285,7 @@ namespace NonStandard.Cli {
 			if (string.IsNullOrEmpty(txt)) { return; }
 			_keyBuffer.Clear();
 			WriteInputText(txt);
-			isValidInputIndex = input.TryGetIndexOf(console.body.writeCursor, out inputIndex);
+			RefreshCursorValid();
 		}
 		private void OnDisable() {
 			Debug.Log("disabled console input");

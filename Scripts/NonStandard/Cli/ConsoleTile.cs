@@ -84,6 +84,7 @@ namespace NonStandard.Cli {
 		public override int GetHashCode() => coord.GetHashCode();
 		public ConsoleDiffUnit WithDifferentTile(ConsoleTile a_tile) => new ConsoleDiffUnit(coord, a_tile, prev);
 		public ConsoleDiffUnit WithDifferentCoord(Coord coord) => new ConsoleDiffUnit(coord, next, prev);
+		public ConsoleDiffUnit WithOffsetCoord(Coord offset) => new ConsoleDiffUnit(coord+offset, next, prev);
 		public void OffsetCoord(Coord coord) { this.coord += coord; Validate(); }
 
 		private void Validate() {

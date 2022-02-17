@@ -165,11 +165,11 @@ namespace NonStandard.Cli {
 						//writeCursor = diff.GetCoord(inputIndex);
 						//UnityEngine.Debug.Log(writeCursor + " '" + thisLetter + "' <- new writecursor, index "+ inputIndex+ " ");
 					}
-					//else {
-					writeCursor.col += cursorSkip;
-					line[writeCursor.col] = thisLetter;
-					writeCursor.col += letterWidth;
-					//}
+					else {
+						writeCursor.col += cursorSkip;
+						line[writeCursor.col] = thisLetter;
+						writeCursor.col += letterWidth;
+					}
 				}
 				if (writeCursor.col >= size.col) { size.col = (short)(writeCursor.col + 1); }
 			}

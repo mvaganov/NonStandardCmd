@@ -21,19 +21,36 @@ namespace NonStandard.Cli {
 		public void Insert(int index, ConsoleTile tile, ConsoleBody body) {
 			if (tile.Letter == '\n') {
 				InsertNewline(index, body);
+				if (!inputArea.IsValid) {
+					body.Cursor = new Coord(0, body.Cursor.y + 1);
+				} else {
+					body.Cursor = new Coord(inputArea.min.col, body.Cursor.y + 1);
+				}
 				return;
 			}
 			int tilesRemainingInRow = CountCharsInRow(index);
-			int tilesToShift = tilesRemainingInRow;
-			int indexAtEndOfLine = index + tilesToShift;
-			Coord endPoint = Start + (Coord.Right * tilesRemainingInRow);
-			UnityEngine.Debug.Log("inserting ' ' at "+ endPoint+":"+indexAtEndOfLine + " in input("+input.Count+") for '" + tile.Letter+"', with "+ tilesRemainingInRow+" columns after it");
-			input.Insert(indexAtEndOfLine, new ConsoleDiffUnit(endPoint, ConsoleTile.DefaultTile, body.GetAt(endPoint)));
+			//int tilesToShift = tilesRemainingInRow + 1;
+			int indexAtEndOfLine = index + tilesRemainingInRow;
+			Coord coordOfIndex = GetCoord(index);
+			Coord endPoint = coordOfIndex + (Coord.Right * tilesRemainingInRow);
+			input.Insert(index, new ConsoleDiffUnit(coordOfIndex, tile, body.GetAt(coordOfIndex)));
 			for (int i = indexAtEndOfLine; i > index; --i) {
-				input[i] = input[i].WithDifferentTile(input[i - 1].next);
+				input[i].OffsetCoord(Coord.Right);
 			}
-			input[index] = input[index].WithDifferentTile(tile);
-			WriteNext(body, index, tilesToShift);
+			//input[index] = input[index].WithDifferentTile(tile);
+			body.Cursor += Coord.Right;
+			if (!inputArea.IsValid) {
+				if (body.Cursor.col >= body.size.col) {
+					body.Cursor = new Coord(0, body.Cursor.y + 1);
+				}
+			} else {
+				if (body.Cursor.col >= inputArea.max.col) {
+					body.Cursor = new Coord(inputArea.min.col, body.Cursor.y + 1);
+				}
+			}
+			WriteNext(body, index, tilesRemainingInRow + 1);
+			UnityEngine.Debug.Log("wrote " + tile.Letter + " at " + endPoint + ":" + indexAtEndOfLine
+				+ " (" + input.Count + ", " + tilesRemainingInRow + " after) " + ToString());
 		}
 
 		public void InsertNewline(int index, ConsoleBody body) {
@@ -97,6 +114,11 @@ namespace NonStandard.Cli {
 				index = input.Count;
 				return false;
 			}
+			Coord start = input.Count > 0 ? input[0].coord : Start;
+			if (c.row < start.row || (c.row == start.row && c.col < start.Col)) {
+				index = 0;
+				return false;
+			}
 			for (index = 0; index < input.Count; ++index) {
 				Coord coord = input[index].coord;
 				if (coord == c) {
@@ -107,12 +129,14 @@ namespace NonStandard.Cli {
 					return false;
 				}
 			}
-			throw new Exception("should return before this point");
+			index = input.Count;
+			return true;
+			//throw new Exception("should return before this point");
 		}
 
 		public Coord FinalIndexCoord() {
 			if (input.Count == 0) {
-				UnityEngine.Debug.Log("final index is start");
+				//UnityEngine.Debug.Log("final index is start");
 				return Start;
 			}
 			Coord lastOne = input[input.Count - 1].coord;
@@ -120,9 +144,9 @@ namespace NonStandard.Cli {
 			if (input[input.Count - 1].next.Letter == '\n' || (inputArea.IsValid && limit.X >= inputArea.Max.X)) {
 				++limit.Row;
 				limit.Col = inputArea.IsValid ? inputArea.Min.Col : 0;
-				UnityEngine.Debug.Log("final index crosses row boundary!");
+				//UnityEngine.Debug.Log("final index crosses row boundary!");
 			}
-			UnityEngine.Debug.Log("final index is "+limit);
+			//UnityEngine.Debug.Log("final index is "+limit);
 			return limit;
 		}
 
