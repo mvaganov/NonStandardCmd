@@ -34,25 +34,35 @@ namespace NonStandard.Cli {
 			int indexAtEndOfLine = index + tilesRemainingInRow;
 			Coord coordOfIndex = GetCoord(index);
 			Coord endPoint = coordOfIndex + (Coord.Right * tilesRemainingInRow);
-			UnityEngine.Debug.Log("inserting " + tile + " @" + coordOfIndex + ":" + index + "/" + input.Count);
+			string currentString = ToSimpleString();
+			UnityEngine.Debug.Log("inserting " + tile + " @" + coordOfIndex + ":" + index + "/" + input.Count+ " between ["+currentString.Substring(0, index)+ "] and ("+currentString.Substring(index)+")");
 			input.Insert(index, new ConsoleDiffUnit(coordOfIndex, tile, body.GetAt(coordOfIndex)));
-			for (int i = indexAtEndOfLine; i > index; --i) {
-				input[i].OffsetCoord(Coord.Right);
+			//for (int i = indexAtEndOfLine; i > index; --i) {
+			//	input[i].OffsetCoord(Coord.Right);
+			//}
+			// push forward the other letters
+			for (int i = index+1; i < input.Count && input[i].coord.Row == coordOfIndex.Row; ++i) {
+				Coord testCoord = input[i].coord;
+				input[i] = input[i].WithOffsetCoord(Coord.Right);
+				if (testCoord == input[i].coord) {
+					throw new Exception("bruh, not working.");
+				}
 			}
+			UnityEngine.Debug.Log("wrote " + tile.Letter + " at " + endPoint + ":" + indexAtEndOfLine
+				+ " (" + input.Count + ", " + tilesRemainingInRow + " after) " + ToString());
 			//input[index] = input[index].WithDifferentTile(tile);
 			Cursor += Coord.Right;
 			if (!inputArea.IsValid) {
 				if (Cursor.col >= body.size.col) {
 					Cursor = new Coord(0, Cursor.y + 1);
 				}
-			} else {
-				if (Cursor.col >= inputArea.max.col) {
-					Cursor = new Coord(inputArea.min.col, Cursor.y + 1);
-				}
 			}
+			//else {
+			//	if (Cursor.col >= inputArea.max.col) {
+			//		Cursor = new Coord(inputArea.min.col, Cursor.y + 1);
+			//	}
+			//}
 			WriteNext(body, index, tilesRemainingInRow + 1);
-			UnityEngine.Debug.Log("wrote " + tile.Letter + " at " + endPoint + ":" + indexAtEndOfLine
-				+ " (" + input.Count + ", " + tilesRemainingInRow + " after) " + ToString());
 		}
 
 		public void InsertNewline(int index, ConsoleBody body) {
@@ -64,7 +74,7 @@ namespace NonStandard.Cli {
 			if (insertionPoint.col != 0) {
 				offset = new Coord(-input[index + 1].coord.col, 1);
 				for (int i = index + 1; i < input.Count; ++i) {
-					input[i].OffsetCoord(offset);
+					input[i] = input[i].WithOffsetCoord(offset);
 					++nextLineStartOffset;
 					if (input[i].next == '\n') {
 						break;
@@ -73,7 +83,7 @@ namespace NonStandard.Cli {
 			}
 			offset = new Coord(0, 1);
 			for (int i = index + 1 + nextLineStartOffset; i < input.Count; ++i) {
-				input[i].OffsetCoord(offset);
+				input[i] = input[i].WithOffsetCoord(offset);
 			}
 			WriteNext(body, index, input.Count - index);
 		}
@@ -87,7 +97,7 @@ namespace NonStandard.Cli {
 			if (insertionPoint.col != 0) {
 				offset = new Coord(input[index].coord.col, -1);
 				for (int i = index + 1; i < input.Count; ++i) {
-					input[i].OffsetCoord(offset);
+					input[i] = input[i].WithOffsetCoord(offset);
 					++nextLineStartOffset;
 					if (input[i].next == '\n') {
 						break;
@@ -96,7 +106,7 @@ namespace NonStandard.Cli {
 			}
 			offset = new Coord(0, -1);
 			for (int i = index + 1 + nextLineStartOffset; i < input.Count; ++i) {
-				input[i].OffsetCoord(offset);
+				input[i] = input[i].WithOffsetCoord(offset);
 			}
 			WriteNext(body, index, input.Count - index);
 		}
@@ -195,6 +205,13 @@ namespace NonStandard.Cli {
 			if (inputIndex >= input.Count) { return FinalIndexCoord(); }
 			UnityEngine.Debug.Log("not end, not start: "+inputIndex+":"+ input[inputIndex].coord);
 			return input[inputIndex].coord;
+		}
+		public string ToSimpleString() {
+			StringBuilder sb = new StringBuilder();
+			for (int i = 0; i < input.Count; ++i) {
+				sb.Append(input[i].next.Letter);
+			}
+			return sb.ToString();
 		}
 
 		public override string ToString() {

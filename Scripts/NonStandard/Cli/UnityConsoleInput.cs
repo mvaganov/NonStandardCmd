@@ -121,6 +121,12 @@ namespace NonStandard.Cli {
 		}
 
 		private void RefreshCursorValid() {
+			if (console.Cursor.col < 0) {
+				console.Cursor = new Coord(0, console.Cursor.row);
+			}
+			if (console.Cursor.row < 0) {
+				console.Cursor = new Coord(console.Cursor.col, 0);
+			}
 			console.cursor.validInputIndex = input.TryGetIndexOf(console.Cursor, out console.cursor.indexInInput);
 		}
 
