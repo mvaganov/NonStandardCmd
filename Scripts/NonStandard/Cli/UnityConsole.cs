@@ -10,28 +10,34 @@ namespace NonStandard.Cli {
 		public TMP_InputField inputField;
 		TMP_Text text;
 		TMP_Text charBack;
+		public UnityConsoleCursor cursorUi = new UnityConsoleCursor();
+
 		List<Tile> foreTile = new List<Tile>(), backTile = new List<Tile>();
 		private bool textNeedsRefresh = false;
-		public CursorSettings cursor = new CursorSettings();
+		public CursorState cursor;
 		public DisplayWindowSettings Window = new DisplayWindowSettings();
 		internal ConsoleBody body = new ConsoleBody();
 		private List<byte> _colorStack = new List<byte>();
 
-		// TODO move this code into UnityConsoleCursor?
-		[System.Serializable] public class CursorSettings {
+		[System.Serializable] public class CursorState {
 			public bool cursorVisible = true;
 			public bool validInputIndex;
-			public GameObject cursor;
 			public Coord position;
 			public int indexInInput;
 			public int indexInConsole;
+		}
+
+		// TODO move this code into UnityConsoleCursor?
+		[System.Serializable] public class UnityConsoleCursor {
+			public GameObject cursor;
 			Vector3[] cursorMeshPosition = new Vector3[4];
+			[HideInInspector] public CursorState state;
 			public Vector3 CalculateCursorPosition() {
 				return (cursorMeshPosition[0] + cursorMeshPosition[1] + cursorMeshPosition[2] + cursorMeshPosition[3]) / 4;
 			}
 			public void RefreshCursorPosition(UnityConsole console) {
 				if (cursor == null) return;
-				if (cursorVisible && indexInConsole >= 0) {
+				if (state.cursorVisible && state.indexInConsole >= 0) {
 					Transform t = cursor.transform;
 					Vector3 p = CalculateCursorPosition();
 					t.localPosition = p;
@@ -53,8 +59,8 @@ namespace NonStandard.Cli {
 			}
 			public void Init(UnityConsole console) {
 				if (cursor != null) {
-					UnityConsoleCursor ucc = cursor.GetComponent<UnityConsoleCursor>();
-					if (ucc == null) { ucc = cursor.AddComponent<UnityConsoleCursor>(); }
+					Cli.UnityConsoleCursor ucc = cursor.GetComponent<Cli.UnityConsoleCursor>();
+					if (ucc == null) { ucc = cursor.AddComponent<Cli.UnityConsoleCursor>(); }
 					ucc.Initialize(console.Text.fontSize);
 				}
 			}
@@ -158,7 +164,7 @@ namespace NonStandard.Cli {
 		public void AddToFontSize(float value) {
 			FontSize += value;
 			if (FontSize < 1) { FontSize = 1; }
-			if (cursor.cursor != null) { cursor.cursor.GetComponent<UnityConsoleCursor>().ScaleToFontSize(FontSize); }
+			if (cursorUi.cursor != null) { cursorUi.cursor.GetComponent<Cli.UnityConsoleCursor>().ScaleToFontSize(FontSize); }
 			RefreshText();
 		}
 
@@ -184,7 +190,7 @@ namespace NonStandard.Cli {
 				if (Window.followCursor == DisplayWindowSettings.FollowBehavior.Yes) {
 					Window.viewRect.MoveToContain(cursor.position);
 				}
-				cursor.RefreshCursorPosition(this);
+				cursorUi.RefreshCursorPosition(this);
 				textNeedsRefresh = true;
 			}
 		}
@@ -200,8 +206,8 @@ namespace NonStandard.Cli {
 		public int CursorLeft { get => cursor.position.Col; set => cursor.position.SetX(value); }
 		public int CursorTop { get => cursor.position.Row; set => cursor.position.SetY(value); }
 		public int CursorSize {
-			get { return (int)(cursor.cursor.transform.localScale.MagnitudeManhattan() / 3); }
-			set { cursor.cursor.transform.localScale = Vector3.one * (value / 100f); }
+			get { return (int)(cursorUi.cursor.transform.localScale.MagnitudeManhattan() / 3); }
+			set { cursorUi.cursor.transform.localScale = Vector3.one * (value / 100f); }
 		}
 		public bool CursorVisible { get => cursor.cursorVisible; set => cursor.cursorVisible = value; }
 
@@ -223,6 +229,7 @@ namespace NonStandard.Cli {
 
 		public void ResetColor() { body.currentDefaultTile = body.defaultColors; }
 		private void Awake() {
+			cursorUi.state = cursor;
 			colorSettings.FillInDefaultPalette();
 			Window.body = body;
 		}
@@ -265,7 +272,7 @@ namespace NonStandard.Cli {
 			brt.anchorMax = rt.anchorMax;
 			brt.offsetMin = rt.offsetMin;
 			brt.offsetMax = rt.offsetMax;
-			cursor.Init(this);
+			cursorUi.Init(this);
 		}
 		public void Update() {
 			if (textNeedsRefresh) {
@@ -288,7 +295,7 @@ namespace NonStandard.Cli {
 				CalculateText(body, limit, backTile, false, colorSettings.backgroundAlpha);
 				TransferToTMP(false, backTile);
 			}
-			cursor.RefreshCursorPosition(this);
+			cursorUi.RefreshCursorPosition(this);
 			textNeedsRefresh = false;
 			//Show.Log(body.Cursor);
 		}
@@ -450,7 +457,7 @@ namespace NonStandard.Cli {
 						if (vertexIndex >= verts.Length) {
 							Debug.LogWarning("weirdness happening. "+tmpText.text);
 						} else {
-							cursor.SetCursorPositionPoints(verts, vertexIndex);
+							cursorUi.SetCursorPositionPoints(verts, vertexIndex);
 						}
 					}
 					if (vertexIndex < vertColors.Length && i < tiles.Count && !vertColors[vertexIndex].Eq(color = tiles[i].color)) {
