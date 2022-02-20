@@ -11,13 +11,20 @@ namespace NonStandard.Cli {
 		TMP_Text text;
 		TMP_Text charBack;
 		public UnityConsoleCursor cursorUi = new UnityConsoleCursor();
-
 		List<Tile> foreTile = new List<Tile>(), backTile = new List<Tile>();
+
 		private bool textNeedsRefresh = false;
 		public CursorState cursor;
 		public DisplayWindowSettings Window = new DisplayWindowSettings();
 		internal ConsoleBody body = new ConsoleBody();
 		private List<byte> _colorStack = new List<byte>();
+
+		public struct Tile {
+			public ColorRGBA color;
+			public float height;
+			public char letter;
+			public Tile(char letter, ColorRGBA color, float height) { this.letter = letter; this.height = height; this.color = color; }
+		}
 
 		[System.Serializable] public class CursorState {
 			public bool cursorVisible = true;
@@ -27,7 +34,6 @@ namespace NonStandard.Cli {
 			public int indexInConsole;
 		}
 
-		// TODO move this code into UnityConsoleCursor?
 		[System.Serializable] public class UnityConsoleCursor {
 			public GameObject cursor;
 			Vector3[] cursorMeshPosition = new Vector3[4];
@@ -220,13 +226,6 @@ namespace NonStandard.Cli {
 			}
 		}
 
-		public struct Tile {
-			public ColorRGBA color;
-			public float height;
-			public char letter;
-			public Tile(char letter, ColorRGBA color, float height) { this.letter = letter;this.height = height;this.color = color; }
-		}
-
 		public void ResetColor() { body.currentDefaultTile = body.defaultColors; }
 		private void Awake() {
 			cursorUi.state = cursor;
@@ -345,7 +344,7 @@ namespace NonStandard.Cli {
 						} else if (line.Count > 0) {
 							current.Letter = foreground ? charSettings.EmptyChar : charSettings.BackgroundChar;
 						}
-						if (!foreground && this.cursor.cursorVisible && Cursor.col == col && Cursor.row == row) {
+						if (!foreground && CursorVisible && Cursor.col == col && Cursor.row == row) {
 							this.cursor.indexInConsole = out_tile.Count;
 						}
 						ColorRGBA colorRgba = GetConsoleColor(foreground ? current.fore : current.back, foreground);
@@ -359,7 +358,7 @@ namespace NonStandard.Cli {
 					colorRgba.a = (byte)(colorRgba.a * alpha);
 					while (col <= Cursor.col) {
 						current.Letter = foreground ? charSettings.EmptyChar : charSettings.BackgroundChar;
-						if (!foreground && this.cursor.cursorVisible && Cursor.col == col && Cursor.row == row) {
+						if (!foreground && CursorVisible && Cursor.col == col && Cursor.row == row) {
 							this.cursor.indexInConsole = out_tile.Count;
 						}
 						out_tile.Add(new Tile(current.Letter, colorRgba, 0));

@@ -4,5 +4,6 @@ using UnityEngine;
 
 namespace NonStandard.Cli {
 	public class ConsoleIo {
+
 	}
 }
