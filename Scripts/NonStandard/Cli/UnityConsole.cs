@@ -11,6 +11,7 @@ namespace NonStandard.Cli {
 		TMP_Text text;
 		TMP_Text charBack;
 		public UnityConsoleCursor cursorUi = new UnityConsoleCursor();
+		public UnityConsoleOutput consoleOutput = new UnityConsoleOutput();
 		List<Tile> foreTile = new List<Tile>(), backTile = new List<Tile>();
 
 		private bool textNeedsRefresh = false;
@@ -71,14 +72,16 @@ namespace NonStandard.Cli {
 				}
 			}
 		}
+		[System.Serializable] public class UnityConsoleOutput {
+			public Vector2 sizeCalculated = -Vector2.one;
+			public float fontSizeCalculated = -1;
+		}
 		[System.Serializable] public class DisplayWindowSettings {
 			public enum WindowSizing { Unconstrained, UseStaticViewRectangle, AutoCalculateViewRectangle }
 			internal ConsoleBody body;
 			public static readonly CoordRect Maximum = new CoordRect(Coord.Zero, Coord.Max);
 			[Tooltip("only render characters contained in the render window")]
 			public WindowSizing windowSizing = WindowSizing.AutoCalculateViewRectangle;
-			private Vector2 sizeCalculated = -Vector2.one;
-			private float fontSizeCalculated = -1;
 			public CoordRect viewRect = Maximum;
 			public enum FollowBehavior { No, Yes }
 			public FollowBehavior followCursor = FollowBehavior.Yes;
@@ -113,25 +116,25 @@ namespace NonStandard.Cli {
 				viewRect.Position += direction;
 				UpdatePosition();
 			}
-			public static Vector2 TextAreaSize(UnityConsole console) {
-				return (console.inputField != null ? console.inputField.textViewport : console.text.GetComponent<RectTransform>()).rect.size;
-			}
-			public bool NeedsCalculation(UnityConsole console) {
-				return windowSizing == WindowSizing.AutoCalculateViewRectangle &&
-					(fontSizeCalculated != console.text.fontSize || TextAreaSize(console) != sizeCalculated);
-			}
-			public void DoCalculation(UnityConsole console, DisplayCalculations calc) {
-				Vector2 ideal = calc.CalculateIdealSize();
-				viewRect.Size = new Coord((short)ideal.x, (short)ideal.y);
-				UpdatePosition();
-				// if the calculated values are reasonable limits
-				if (ideal.x < Coord.Max.X-2 || ideal.y < Coord.Max.Y - 2) {
-					// cache these calculations as valid, which means they won't be recalculated as much later
-					fontSizeCalculated = console.text.fontSize;
-					sizeCalculated = TextAreaSize(console);
-				}
-			}
 			public void ResetWindowSize() { viewRect.Size = new Coord(Coord.Max.X - 1, Coord.Max.Y - 1); }
+		}
+		public Vector2 TextAreaSize() {
+			return (inputField != null ? inputField.textViewport : text.GetComponent<RectTransform>()).rect.size;
+		}
+		public bool NeedsCalculation() {
+			return Window.windowSizing == DisplayWindowSettings.WindowSizing.AutoCalculateViewRectangle &&
+				(consoleOutput.fontSizeCalculated != text.fontSize || TextAreaSize() != consoleOutput.sizeCalculated);
+		}
+		public void DoCalculation(UnityConsole console, DisplayCalculations calc) {
+			Vector2 ideal = calc.CalculateIdealSize();
+			Window.viewRect.Size = new Coord((short)ideal.x, (short)ideal.y);
+			Window.UpdatePosition();
+			// if the calculated values are reasonable limits
+			if (ideal.x < Coord.Max.X - 2 || ideal.y < Coord.Max.Y - 2) {
+				// cache these calculations as valid, which means they won't be recalculated as much later
+				consoleOutput.fontSizeCalculated = console.text.fontSize;
+				consoleOutput.sizeCalculated = TextAreaSize();
+			}
 		}
 		public void ScrollRenderWindow(Coord direction) {
 			Window.ScrollRenderWindow(direction);
@@ -180,10 +183,10 @@ namespace NonStandard.Cli {
 		}
 		public CharSettings charSettings = new CharSettings();
 
-		public int AddConsoleColor(ColorRGBA colorRgba) { return colorSettings.AddConsoleColor(colorRgba); }
-		public int GetConsoleColorCount() { return colorSettings.ConsoleColorPalette.Count; }
+		public int AddConsoleColorPalette(ColorRGBA colorRgba) { return colorSettings.AddConsoleColor(colorRgba); }
+		public int GetConsoleColorPaletteCount() { return colorSettings.ConsoleColorPalette.Count; }
 		public ColorRGBA GetConsoleColor(int code, bool foreground) {
-			if(code == Col.DefaultColorIndex) { code = foreground ? body.defaultColors.fore : body.defaultColors.back; }
+			if(code < 0 || code == Col.DefaultColorIndex) { code = foreground ? body.defaultColors.fore : body.defaultColors.back; }
 			//if(code < 0 || code >= colorSettings.ConsoleColorPalette.Count) {
 			//	Show.Log(code + "? max is "+ colorSettings.ConsoleColorPalette.Count);
 			//}
@@ -283,12 +286,12 @@ namespace NonStandard.Cli {
 			CoordRect limit = Window.Limit;
 			CalculateText(body, limit, foreTile, true, colorSettings.foregroundAlpha);
 			DisplayCalculations calc = null;
-			if (Window.NeedsCalculation(this)) {
+			if (NeedsCalculation()) {
 				calc = new DisplayCalculations(this);
 			}
 			TransferToTMP(true, foreTile, calc);
 			if (calc != null) {
-				Window.DoCalculation(this, calc);
+				DoCalculation(this, calc);
 			}
 			if (charBack) {
 				CalculateText(body, limit, backTile, false, colorSettings.backgroundAlpha);

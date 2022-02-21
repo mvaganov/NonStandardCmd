@@ -258,7 +258,7 @@ namespace NonStandard.Cli {
 		}
 
 		private void Start() {
-			inputColorCode = console.AddConsoleColor(inputColor);
+			inputColorCode = console.AddConsoleColorPalette(inputColor);
 			console.Write("testing");
 		}
 		public void RestartInput() {
