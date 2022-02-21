@@ -41,7 +41,7 @@ namespace NonStandard.Cli {
 		public void EnqueueConsoleTextRefresh() {
 			Proc.Enqueue(() => {
 				UnityConsole console = GetComponent<UnityConsole>();
-				console.Window.ResetWindowSize();
+				console.io.Window.ResetWindowSize();
 				console.RefreshText();
 			});
 		}

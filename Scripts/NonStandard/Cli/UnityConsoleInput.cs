@@ -116,18 +116,19 @@ namespace NonStandard.Cli {
 		public static bool IsControlDown() { return Keyboard.current.leftCtrlKey.isPressed || Keyboard.current.rightCtrlKey.isPressed; }
 		public static bool IsAltDown() { return Keyboard.current.leftAltKey.isPressed || Keyboard.current.rightAltKey.isPressed; }
 		private void MovCur(Coord dir) {
-			console.Cursor += dir;
+			console.io.Cursor += dir;
 			RefreshCursorValid();
 		}
 
+		// TODO move this method to ConsoleIo?
 		private void RefreshCursorValid() {
-			if (console.Cursor.col < 0) {
-				console.Cursor = new Coord(0, console.Cursor.row);
+			if (console.io.Cursor.col < 0) {
+				console.io.Cursor = new Coord(0, console.io.Cursor.row);
 			}
-			if (console.Cursor.row < 0) {
-				console.Cursor = new Coord(console.Cursor.col, 0);
+			if (console.io.Cursor.row < 0) {
+				console.io.Cursor = new Coord(console.io.Cursor.col, 0);
 			}
-			console.cursor.validInputIndex = input.TryGetIndexOf(console.Cursor, out console.cursor.indexInInput);
+			console.io.cursor.validInputIndex = input.TryGetIndexOf(console.io.Cursor, out console.io.cursor.indexInInput);
 		}
 
 		private void MovWin(Coord dir) { console.ScrollRenderWindow(dir); }
@@ -261,16 +262,18 @@ namespace NonStandard.Cli {
 			inputColorCode = console.AddConsoleColorPalette(inputColor);
 			console.Write("testing");
 		}
+		// TODO move this method to ConsoleIo?
 		public void RestartInput() {
-			console.cursor.indexInInput = 0;
-			input.Start = console.Cursor;
+			console.io.cursor.indexInInput = 0;
+			input.Start = console.io.Cursor;
 		}
+		// TODO move this method to ConsoleIo?
 		public void WriteInputText(string inputText) {
-			if (inputColorCode > 0) { console.PushForeColor((byte)inputColorCode); }
-			console.Write(inputText, input, ref console.cursor.indexInInput);
+			if (inputColorCode > 0) { console.io.PushForeColor((byte)inputColorCode); }
+			console.io.Write(inputText, input, ref console.io.cursor.indexInInput);
 			//UpdateReplacedList(replacedThisWrite);
 			_inputBuffer.Append(inputText);
-			if (inputColorCode > 0) { console.PopForeColor(); }
+			if (inputColorCode > 0) { console.io.PopForeColor(); }
 		}
 		//private void UpdateReplacedList(List<ConsoleDiffUnit> replacedThisWrite) {
 		//	for (int i = 0; i < replacedThisWrite.Count; i++) {
