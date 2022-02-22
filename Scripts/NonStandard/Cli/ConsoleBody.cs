@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using NonStandard.Extension;
 using System;
+using System.Text;
 
 namespace NonStandard.Cli {
 	[Serializable] public class ConsoleBody {
@@ -17,37 +18,28 @@ namespace NonStandard.Cli {
 		/// </summary>
 		public Dictionary<char, char> printableCharacters = new Dictionary<char, char>();
 		public List<List<ConsoleTile>> lines = new List<List<ConsoleTile>>();
-//		public Coord writeCursor;
 		public Coord size;
 		public bool CursorAllowedInEmptyAreaInRow = false;
-
-//		public bool isValidInputIndex;
-//		private int inputIndex;
-
-//		public ConsoleDiff input = new ConsoleDiff();
-
-//		public Coord Cursor {
-//			get => writeCursor;
-//			set {
-//				writeCursor = value;
-//				Coord limit = size;
-//				if(limit.row < 1) { limit.row = 1; }
-//				writeCursor.row = writeCursor.row.Clamp((short)0, (short)(limit.row - 1));
-//				if (!CursorAllowedInEmptyAreaInRow) {
-//					limit.col = (short)(writeCursor.row < lines.Count && writeCursor.row >= 0 ? lines[writeCursor.row].Count : 0);
-//				}
-//				writeCursor.col = writeCursor.col.Clamp((short)0, limit.col);
-////				isValidInputIndex = input.TryGetIndexOf(writeCursor, out inputIndex);
-//			}
-//		}
-//		public void RestartWriteCursor() { input.Start = Cursor; }
-		//public int CursorLeft { get => writeCursor.X; set => writeCursor.X = value; }
-		//public int CursorTop { get => writeCursor.Y; set => writeCursor.Y = value; }
+		public override string ToString() {
+			StringBuilder sb = new StringBuilder();
+			for(int row = 0; row < lines.Count; ++row) {
+				List<ConsoleTile> line = lines[row];
+				for (int col = 0; col < line.Count; ++col) {
+					sb.Append(line[col]);
+					if (line[col] == '\n' && col != line.Count - 1) {
+						throw new Exception("newline characters should not be in the middle of a line");
+					}
+				}
+				if (line[line.Count - 1] != '\n' && row != lines.Count - 1) {
+					sb.Append('\n');
+				}
+			}
+			return sb.ToString();
+		}
 		public Coord Size {
 			get => size;
 		}
 		public void Clear() {
-//			Cursor = Coord.Zero;
 			size = Coord.Zero;
 			lines.Clear();
 		}
@@ -115,6 +107,9 @@ namespace NonStandard.Cli {
 						if (diff != null) {
 							if (inputIndex > 0) {
 								--inputIndex;
+								string s = diff.ToSimpleStringPrev().Substring(inputIndex);
+								UnityEngine.Debug.Log("rewriting "+s);
+								diff.WritePrev(this, inputIndex, 1);
 								diff.RemoveAt(inputIndex, this);
 								writeCursor = diff.GetCoord(inputIndex);
 								UnityEngine.Debug.Log(writeCursor + " <- new writecursor, index " + inputIndex + " after backspace");
@@ -138,52 +133,56 @@ namespace NonStandard.Cli {
 				}
 				EnsureSufficientLines(writeCursor.row + 1);
 				if (printCharacter) {
-					ConsoleTile thisLetter = GetPrintable(c, writeCursor, out short letterWidth, out short cursorSkip);
-					if(writeCursor.row >= lines.Count || writeCursor.row < 0) {
-						throw new Exception("bad write cursor state "+writeCursor+" with "+lines.Count+" rows");
+					if (writeCursor.row >= lines.Count || writeCursor.row < 0) {
+						throw new Exception("bad write cursor state " + writeCursor + " with " + lines.Count + " rows");
 					}
-					line = lines[writeCursor.row];
-					int endOfChange = writeCursor.col + letterWidth + cursorSkip;
 					if (writeCursor.col < 0) {
-						throw new Exception("negative column? "+ writeCursor+" trying to write "+text.Length+" chars: "+text);
+						throw new Exception("negative column? " + writeCursor + " trying to write " + text.Length + " chars: " + text);
 					}
-					for (int s = writeCursor.col; s < endOfChange; ++s) {
-						if (s < line.Count) {
-							line[s] = currentDefaultTile;
-						} else if (s >= line.Count) {
-							line.Add(currentDefaultTile);
-						}
-						//if (diff != null) {
-						//	diff.Insert(inputIndex, currentDefaultTile, this);
-						//	//ioDelta.Add(new ConsoleArtifact(new Coord(s, writeCursor.row), currentDefaultTile));
-						//}
-					}
-					while (writeCursor.col + letterWidth > line.Count) { line.Add(currentDefaultTile); }
-					if (diff != null) {
-						diff.Insert(inputIndex, thisLetter, this, ref writeCursor);
-						++inputIndex;
-						//writeCursor = diff.GetCoord(inputIndex);
-						//UnityEngine.Debug.Log(writeCursor + " '" + thisLetter + "' <- new writecursor, index "+ inputIndex+ " ");
-					}
-					else {
-						writeCursor.col += cursorSkip;
-						if (writeCursor.col < line.Count) {
-							line[writeCursor.col] = thisLetter;
-						} else if (writeCursor.col == line.Count) {
-							line.Add(thisLetter);
-						} else {
-							throw new Exception("Unable to add letter beyond the length of the line!");
-						}
-						writeCursor.col += letterWidth;
-					}
+					PrintCharacter(c, diff, ref writeCursor, ref inputIndex);
 				}
 				if (writeCursor.col >= size.col) { size.col = (short)(writeCursor.col + 1); }
 			}
 			size.row = (short)Math.Max(lines.Count, writeCursor.row + 1);
 		}
 
+		private void PrintCharacter(char c, ConsoleDiff diff, ref Coord writeCursor, ref int inputIndex) {
+			List<ConsoleTile> line = lines[writeCursor.row];
+			// calculate how much space this character should take on the line
+			ConsoleTile thisLetter = GetPrintable(c, writeCursor, out short letterWidth, out short cursorSkip);
+			int endOfChange = writeCursor.col + letterWidth + cursorSkip;
+			for (int s = writeCursor.col; s < endOfChange; ++s) {
+				if (s < line.Count) {
+					if (diff == null) {
+						line[s] = currentDefaultTile;
+					}
+				} else 
+				if (s >= line.Count) {
+					line.Add(currentDefaultTile);
+				}
+			}
+			EnsureSufficientColumns(line, writeCursor.col + letterWidth);//while (writeCursor.col + letterWidth > line.Count) { line.Add(currentDefaultTile); }
+			if (diff != null) {
+				diff.Insert(inputIndex, thisLetter, this, ref writeCursor);
+				++inputIndex;
+			} else {
+				writeCursor.col += cursorSkip;
+				if (writeCursor.col < line.Count) {
+					line[writeCursor.col] = thisLetter;
+				} else if (writeCursor.col == line.Count) {
+					line.Add(thisLetter);
+				} else {
+					throw new Exception("Unable to add letter beyond the length of the line!");
+				}
+				writeCursor.col += letterWidth;
+			}
+		}
+
 		public void EnsureSufficientLines(int lineCount) {
 			while (lineCount > lines.Count) { lines.Add(new List<ConsoleTile>()); }
+		}
+		public void EnsureSufficientColumns(List<ConsoleTile> line, int columnCount) {
+			while (columnCount > line.Count) { line.Add(currentDefaultTile); }
 		}
 
 		public int CalculateWidth() {
@@ -201,11 +200,11 @@ namespace NonStandard.Cli {
 
 		/// <param name="c">character to print</param>
 		/// <param name="letterWidth">how far to move after printing the <see cref="ConsoleTile"/></param>
-		/// <param name="cursorSkip">how far to move before printing the <see cref="ConsoleTile"/></param>
+		/// <param name="moveBefore">how far to move before printing the <see cref="ConsoleTile"/></param>
 		/// <returns></returns>
-		public ConsoleTile GetPrintable(char c, Coord Cursor, out short letterWidth, out short cursorSkip) {
+		public ConsoleTile GetPrintable(char c, Coord cursor, out short letterWidth, out short moveBefore) {
 			ConsoleTile thisLetter = currentDefaultTile;
-			cursorSkip = 0;
+			moveBefore = 0;
 			switch (c) {
 			case '\b':
 				thisLetter.Set(' ', currentDefaultTile.Fore, currentDefaultTile.Back);
@@ -213,8 +212,8 @@ namespace NonStandard.Cli {
 				return thisLetter;
 			case '\t':
 				thisLetter.Set('t', currentDefaultTile.Back, currentDefaultTile.Fore);
-				letterWidth = (short)(spacesPerTab - (Cursor.col % spacesPerTab));//1;//
-				//cursorSkip = (short)(spacesPerTab - (writeCursor.col % spacesPerTab) - 1);
+				letterWidth = (short)(spacesPerTab - (cursor.col % spacesPerTab));//1;//
+				//moveBefore = (short)(spacesPerTab - (writeCursor.col % spacesPerTab) - 1);
 				return thisLetter;
 			default:
 				letterWidth = 1;

@@ -7,14 +7,17 @@ using NonStandard.Extension;
 
 namespace NonStandard.Cli {
 	public class UnityConsole : MonoBehaviour {
+		public string nextText, prevText;
+		public ConsoleIo io;
 		public TMP_InputField inputField;
 		TMP_Text text;
 		TMP_Text charBack;
 		public UnityConsoleCursor cursorUi = new UnityConsoleCursor();
-		public UnityConsoleOutput consoleOutput = new UnityConsoleOutput();
-		List<Tile> foreTile = new List<Tile>(), backTile = new List<Tile>();
-
-		public ConsoleIo io;
+		internal UnityConsoleOutput consoleOutput = new UnityConsoleOutput();
+		List<Tile> foreTile = new List<Tile>();
+		List<Tile> backTile = new List<Tile>();
+		public ColorSettings colorSettings = new ColorSettings();
+		public CharSettings defaultEmptyCharacter = new CharSettings();
 
 		public struct Tile {
 			public ColorRGBA color;
@@ -69,17 +72,16 @@ namespace NonStandard.Cli {
 			return (inputField != null ? inputField.textViewport : text.GetComponent<RectTransform>()).rect.size;
 		}
 		public bool NeedsCalculation() {
-			return io.Window.IsAutosizing &&
-				(consoleOutput.fontSizeCalculated != text.fontSize || TextAreaSize() != consoleOutput.sizeCalculated);
+			return consoleOutput.fontSizeCalculated != text.fontSize || TextAreaSize() != consoleOutput.sizeCalculated;
 		}
-		public void DoCalculation(UnityConsole console, DisplayCalculations calc) {
+		public void DoCalculation(DisplayCalculations calc) {
 			Vector2 ideal = calc.CalculateIdealSize();
 			io.Window.viewRect.Size = new Coord((short)ideal.x, (short)ideal.y);
 			io.Window.UpdatePosition();
 			// if the calculated values are reasonable limits
 			if (ideal.x < Coord.Max.X - 2 || ideal.y < Coord.Max.Y - 2) {
 				// cache these calculations as valid, which means they won't be recalculated as much later
-				consoleOutput.fontSizeCalculated = console.text.fontSize;
+				consoleOutput.fontSizeCalculated = text.fontSize;
 				consoleOutput.sizeCalculated = TextAreaSize();
 			}
 		}
@@ -105,7 +107,6 @@ namespace NonStandard.Cli {
 				return ConsoleColorPalette.Count - 1;
 			}
 		}
-		public ColorSettings colorSettings = new ColorSettings();
 
 		public float FontSize {
 			get => inputField != null ? inputField.pointSize : Text.fontSize;
@@ -125,10 +126,9 @@ namespace NonStandard.Cli {
 		}
 
 		[System.Serializable] public class CharSettings {
-			public char EmptyChar = ' ';
-			public char BackgroundChar = '\u2588'; // █
+			public char Foreground = ' '; // normal space
+			public char Background = '\u2588'; // █
 		}
-		public CharSettings charSettings = new CharSettings();
 
 		public int AddConsoleColorPalette(ColorRGBA colorRgba) { return colorSettings.AddConsoleColor(colorRgba); }
 		public int GetConsoleColorPaletteCount() { return colorSettings.ConsoleColorPalette.Count; }
@@ -196,18 +196,20 @@ namespace NonStandard.Cli {
 				cursorUi.RefreshCursorPosition(this);
 				RefreshText();
 			}
+			nextText = io.input.ToSimpleString();
+			prevText = io.input.ToSimpleStringPrev();
 		}
 
 		public void RefreshText() {
 			CoordRect limit = io.Window.Limit;
 			CalculateText(io.body, limit, foreTile, true, colorSettings.foregroundAlpha);
 			DisplayCalculations calc = null;
-			if (NeedsCalculation()) {
+			if (io.Window.IsAutosizing && NeedsCalculation()) {
 				calc = new DisplayCalculations(this);
 			}
 			TransferToTMP(true, foreTile, calc);
 			if (calc != null) {
-				DoCalculation(this, calc);
+				DoCalculation(calc);
 			}
 			if (charBack) {
 				CalculateText(io.body, limit, backTile, false, colorSettings.backgroundAlpha);
@@ -244,9 +246,9 @@ namespace NonStandard.Cli {
 						if (col >= 0) {
 							ConsoleTile tile = line[col];
 							current = tile;
-							if (!foreground) { current.Letter = charSettings.BackgroundChar; }
+							if (!foreground) { current.Letter = defaultEmptyCharacter.Background; }
 						} else if (line.Count > 0) {
-							current.Letter = foreground ? charSettings.EmptyChar : charSettings.BackgroundChar;
+							current.Letter = foreground ? defaultEmptyCharacter.Foreground : defaultEmptyCharacter.Background;
 						}
 						if (!foreground && io.CursorVisible && io.Cursor.col == col && io.Cursor.row == row) {
 							io.cursor.indexInConsole = out_tile.Count;
@@ -262,7 +264,7 @@ namespace NonStandard.Cli {
 					ColorRGBA colorRgba = GetConsoleColor(foreground ? current.fore : current.back, foreground);
 					colorRgba.a = (byte)(colorRgba.a * alpha);
 					while (col <= io.Cursor.col) {
-						current.Letter = foreground ? charSettings.EmptyChar : charSettings.BackgroundChar;
+						current.Letter = foreground ? defaultEmptyCharacter.Foreground : defaultEmptyCharacter.Background;
 						if (!foreground && io.CursorVisible && io.Cursor.col == col && io.Cursor.row == row) {
 							io.cursor.indexInConsole = out_tile.Count;
 						}

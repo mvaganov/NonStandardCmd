@@ -16,10 +16,7 @@ namespace NonStandard.Cli {
 		/// very short-term key storage, processed and added to the <see cref="_inputBuffer"/> each update
 		/// </summary>
 		protected StringBuilder _keyBuffer = new StringBuilder();
-		/// <summary>
-		/// the complete input phrase being entered right now; the complete command being typed.
-		/// </summary>
-		protected StringBuilder _inputBuffer = new StringBuilder();
+
 		protected List<ConsoleDiffUnit> _replaced = new List<ConsoleDiffUnit>();
 
 		protected int _indexInInputBuffer = 0;
@@ -117,20 +114,8 @@ namespace NonStandard.Cli {
 		public static bool IsAltDown() { return Keyboard.current.leftAltKey.isPressed || Keyboard.current.rightAltKey.isPressed; }
 		private void MovCur(Coord dir) {
 			console.io.Cursor += dir;
-			RefreshCursorValid();
+			console.io.RefreshCursorValid();
 		}
-
-		// TODO move this method to ConsoleIo?
-		private void RefreshCursorValid() {
-			if (console.io.Cursor.col < 0) {
-				console.io.Cursor = new Coord(0, console.io.Cursor.row);
-			}
-			if (console.io.Cursor.row < 0) {
-				console.io.Cursor = new Coord(console.io.Cursor.col, 0);
-			}
-			console.io.cursor.validInputIndex = input.TryGetIndexOf(console.io.Cursor, out console.io.cursor.indexInInput);
-		}
-
 		private void MovWin(Coord dir) { console.ScrollRenderWindow(dir); }
 
 		public void PasteFromClipboard() {
@@ -169,7 +154,7 @@ namespace NonStandard.Cli {
 			_keyBuffer.Clear();
 			_indexInInputBuffer = 0;
 			console.Write("\n");
-			RestartInput();
+			console.io.RestartInput();
 			if (string.IsNullOrEmpty(processedInput)) { return; }
 		}
 
@@ -187,13 +172,6 @@ namespace NonStandard.Cli {
 			uinput.AddActionMapToBind("CmdLine");
 		}
 #endif
-		// TODO
-		//public string[] actionsEnabledWithControl = new string[] {
-		//	"CmdLine/biggerFont","CmdLine/smallerFont","CmdLine/biggerFont","CmdLine/copy","CmdLine/paste",
-		//};
-		//public string[] actionsEnabledWithoutControl = new string[] {
-		//	"CmdLine/submitInput",
-		//};
 		public void IncreaseFontSize() { console.AddToFontSize(1); }
 		public void DecreaseFontSize() { console.AddToFontSize(-1); }
 		public void MoveCursorUp() { MovCur(Coord.Up); }
@@ -262,37 +240,17 @@ namespace NonStandard.Cli {
 			inputColorCode = console.AddConsoleColorPalette(inputColor);
 			console.Write("testing");
 		}
-		// TODO move this method to ConsoleIo?
-		public void RestartInput() {
-			console.io.cursor.indexInInput = 0;
-			input.Start = console.io.Cursor;
-		}
-		// TODO move this method to ConsoleIo?
 		public void WriteInputText(string inputText) {
 			if (inputColorCode > 0) { console.io.PushForeColor((byte)inputColorCode); }
-			console.io.Write(inputText, input, ref console.io.cursor.indexInInput);
-			//UpdateReplacedList(replacedThisWrite);
-			_inputBuffer.Append(inputText);
+			console.io.WriteInput(inputText);
 			if (inputColorCode > 0) { console.io.PopForeColor(); }
 		}
-		//private void UpdateReplacedList(List<ConsoleDiffUnit> replacedThisWrite) {
-		//	for (int i = 0; i < replacedThisWrite.Count; i++) {
-		//		ConsoleDiffUnit artifact = replacedThisWrite[i];
-		//		int index = _replaced.BinarySearchIndexOf(artifact);
-		//		if (index < 0) {
-		//			_replaced.Insert(~index, artifact);
-		//		} else {
-		//			_replaced[index] = artifact;
-		//		}
-		//	}
-		//}
-		ConsoleDiff input = new ConsoleDiff();
 		void Update() {
 			string txt = _keyBuffer.ToString();
 			if (string.IsNullOrEmpty(txt)) { return; }
 			_keyBuffer.Clear();
 			WriteInputText(txt);
-			RefreshCursorValid();
+			console.io.RefreshCursorValid();
 		}
 		private void OnDisable() {
 			Debug.Log("disabled console input");

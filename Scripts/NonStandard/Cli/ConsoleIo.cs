@@ -1,7 +1,7 @@
 using NonStandard.Data;
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 
 namespace NonStandard.Cli {
@@ -13,7 +13,15 @@ namespace NonStandard.Cli {
 		public CursorState cursor;
 		public DisplayWindowSettings Window = new DisplayWindowSettings();
 		internal ConsoleBody body = new ConsoleBody();
+		public ConsoleDiff input = new ConsoleDiff();
+		/// <summary>
+		/// color of text being written, as a stack (enables push/pop without color state logic elsewehere).
+		/// </summary>
 		private List<byte> _colorStack = new List<byte>();
+		/// <summary>
+		/// the complete input phrase being entered right now; the complete command being typed.
+		/// </summary>
+		protected StringBuilder _inputBuffer = new StringBuilder();
 
 		public ConsoleIo() {
 			body = new ConsoleBody();
@@ -64,6 +72,10 @@ namespace NonStandard.Cli {
 		public void Write(char c) { Write(c.ToString()); }
 		public void Write(object o) { Write(o.ToString()); }
 		public void Write(string text) { int a = 0; Write(text, null, ref a); }
+		public void WriteInput(string inputText) {
+			Write(inputText, input, ref cursor.indexInInput);
+			_inputBuffer.Append(inputText);
+		}
 		public void Write(string text, ConsoleDiff input, ref int inputIndex) {
 			Coord oldSize = body.Size;
 			if (input != null && input.Start == Coord.NegativeOne) {
@@ -77,6 +89,21 @@ namespace NonStandard.Cli {
 			textNeedsRefresh = true;
 		}
 		public void WriteLine(string text) { Write(text + "\n"); }
+
+		public void RefreshCursorValid() {
+			if (Cursor.col < 0) {
+				Cursor = new Coord(0, Cursor.row);
+			}
+			if (Cursor.row < 0) {
+				Cursor = new Coord(Cursor.col, 0);
+			}
+			cursor.validInputIndex = input.TryGetIndexOf(Cursor, out cursor.indexInInput);
+		}
+		public void RestartInput() {
+			cursor.indexInInput = 0;
+			input.Start = cursor.position;
+		}
+
 		[System.Serializable] public class CursorState {
 			public bool cursorVisible = true;
 			public bool validInputIndex;
