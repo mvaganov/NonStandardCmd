@@ -37,11 +37,11 @@ namespace NonStandard.Cli {
 			string currentString = ToSimpleString();
 			ConsoleTile overwritten = body.GetAt(coordOfIndex);
 			if (overwritten.Letter == '\0') {
-				UnityEngine.Debug.LogWarning("nothing here " + coordOfIndex);
+				//UnityEngine.Debug.LogWarning("nothing here " + coordOfIndex);
 			} else {
-				UnityEngine.Debug.LogWarning((int)overwritten.Letter+" {"+overwritten.Letter+ "} " + coordOfIndex + " : " + body.ToString()); // TODO why is it finding a space where it should find letters?
+				//UnityEngine.Debug.LogWarning((int)overwritten.Letter+" {"+overwritten.Letter+ "} " + coordOfIndex + " : " + body.ToString()); // TODO why is it finding a space where it should find letters?
 			}
-			UnityEngine.Debug.Log("inserting " + tile + " over '" + overwritten + "' @" + coordOfIndex + ":" + index + "/" + delta.Count+ " between ["+currentString.Substring(0, index)+ "] and ("+currentString.Substring(index)+")");
+			//UnityEngine.Debug.Log("inserting " + tile + " over '" + overwritten + "' @" + coordOfIndex + ":" + index + "/" + delta.Count+ " between ["+currentString.Substring(0, index)+ "] and ("+currentString.Substring(index)+")");
 			delta.Insert(index, new ConsoleDiffUnit(coordOfIndex, tile, overwritten));
 			//for (int i = indexAtEndOfLine; i > index; --i) {
 			//	input[i].OffsetCoord(Coord.Right);
@@ -54,8 +54,9 @@ namespace NonStandard.Cli {
 					throw new Exception("bruh, not working.");
 				}
 			}
-			UnityEngine.Debug.Log("wrote " + tile.Letter + " at " + endPoint + ":" + indexAtEndOfLine
-				+ " (" + delta.Count + ", " + tilesRemainingInRow + " after) " + ToString());
+			//UnityEngine.Debug.Log("wrote " + tile.Letter + " at " + endPoint + ":" + indexAtEndOfLine
+			//	+ " (" + delta.Count + ", " + tilesRemainingInRow + " after) " + ToString());
+
 			//input[index] = input[index].WithDifferentTile(tile);
 			Cursor += Coord.Right;
 			//if (!inputArea.IsValid) {

@@ -253,7 +253,7 @@ namespace NonStandard.Cli {
 			console.io.RefreshCursorValid();
 		}
 		private void OnDisable() {
-			Debug.Log("disabled console input");
+			//Debug.Log("disabled console input");
 		}
 	}
 }

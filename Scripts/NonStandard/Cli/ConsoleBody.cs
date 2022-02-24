@@ -93,7 +93,7 @@ namespace NonStandard.Cli {
 				diff.Start = writeCursor;
 				UnityEngine.Debug.LogWarning("...needed to initialize diff.Start...");
 			}
-			UnityEngine.Debug.Log("writing \'" + text + "\' at " + inputIndex + " " + writeCursor + "   " + diff);
+			//UnityEngine.Debug.Log("writing \'" + text + "\' at " + inputIndex + " " + writeCursor + "   " + diff);
 			for (int i = 0; i < text.Length; ++i) {
 				char c = text[i];
 				bool printCharacter = true;
@@ -108,11 +108,11 @@ namespace NonStandard.Cli {
 							if (inputIndex > 0) {
 								--inputIndex;
 								string s = diff.ToSimpleStringPrev().Substring(inputIndex);
-								UnityEngine.Debug.Log("rewriting "+s);
+								//UnityEngine.Debug.Log("rewriting "+s);
 								diff.WritePrev(this, inputIndex, 1);
 								diff.RemoveAt(inputIndex, this);
 								writeCursor = diff.GetCoord(inputIndex);
-								UnityEngine.Debug.Log(writeCursor + " <- new writecursor, index " + inputIndex + " after backspace");
+								//UnityEngine.Debug.Log(writeCursor + " <- new writecursor, index " + inputIndex + " after backspace");
 							}
 						} else {
 							ConsoleBackspace(ref writeCursor);
