@@ -49,8 +49,8 @@ namespace NonStandard.Cli {
 		public byte BackColor { get => body.currentDefaultTile.back; set => body.currentDefaultTile.back = value; }
 		public int BufferHeight => body.Size.Y;
 		public int BufferWidth => body.Size.X;
-		public int CursorLeft { get => cursor.position.Col; set => cursor.position.SetX(value); }
-		public int CursorTop { get => cursor.position.Row; set => cursor.position.SetY(value); }
+		public int CursorLeft { get => cursor.position.Col; set => cursor.position.Col = (value); }
+		public int CursorTop { get => cursor.position.Row; set => cursor.position.Row = (value); }
 
 		public bool CursorVisible { get => cursor.cursorVisible; set => cursor.cursorVisible = value; }
 
