@@ -20,6 +20,10 @@ namespace NonStandard.Cli {
 			this.Letter = letter; fore = (byte)foreColor; back = (byte)backColor;
 		}
 
+		public ConsoleTile(char letter, byte foreColor, byte  backColor) {
+			this.Letter = letter; fore = foreColor; back = backColor;
+		}
+
 		public ConsoleTile(char letter, ConsoleColor foreColor) {
 			this.Letter = letter;
 			fore = (byte)foreColor;
@@ -28,8 +32,8 @@ namespace NonStandard.Cli {
 
 		static ConsoleTile() {
 			DefaultTile = new ConsoleTile('?', Console.ForegroundColor, Console.BackgroundColor);
-			DeletedTile = new ConsoleTile('\b', 0, 0);
-			EmptyTile = new ConsoleTile('\0', 0, 0);
+			DeletedTile = new ConsoleTile('\b', (byte)0, 0);
+			EmptyTile = new ConsoleTile('\0', (byte)0, 0);
 		}
 
 		public ConsoleColor Fore { get => (ConsoleColor)fore; set => fore = (byte)value; }
@@ -64,8 +68,8 @@ namespace NonStandard.Cli {
 		public void Write() { ApplyColor(); Console.Write(Letter); }
 
 		public void Draw(ConsoleTile[,] screen, Coord offset) { screen.SetAt(offset, this); }
-
 		public ConsoleTile CloneWithLetter(char letter) => new ConsoleTile(letter, Fore, Back);
+		public ConsoleTile CloneWithForeColor(byte fore) => new ConsoleTile(Letter, fore, back);
 	}
 
 	/// <summary>
@@ -83,6 +87,7 @@ namespace NonStandard.Cli {
 		public int CompareTo(ConsoleDiffUnit other) => coord.CompareTo(other.coord);
 		public override int GetHashCode() => coord.GetHashCode();
 		public ConsoleDiffUnit WithDifferentTile(ConsoleTile a_tile) => new ConsoleDiffUnit(coord, a_tile, prev);
+		public ConsoleDiffUnit WithDifferentColor(byte color) => new ConsoleDiffUnit(coord, next.CloneWithForeColor(color), prev);
 		public ConsoleDiffUnit WithDifferentCoord(Coord coord) => new ConsoleDiffUnit(coord, next, prev);
 		public ConsoleDiffUnit WithOffsetCoord(Coord offset) => new ConsoleDiffUnit(coord+offset, next, prev);
 		public void OffsetCoord(Coord coord) { this.coord += coord; Validate(); }

@@ -213,6 +213,11 @@ namespace NonStandard.Cli {
 			UnityEngine.Debug.Log("not end, not start: "+inputIndex+":"+ delta[inputIndex].coord);
 			return delta[inputIndex].coord;
 		}
+
+		internal void Clear() {
+			delta.Clear();
+		}
+
 		public string ToSimpleString() {
 			StringBuilder sb = new StringBuilder();
 			for (int i = 0; i < delta.Count; ++i) {

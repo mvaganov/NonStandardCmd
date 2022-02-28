@@ -88,7 +88,6 @@ namespace NonStandard.Cli {
 		}
 
 		public void Write(string text, ConsoleDiff diff, ref int inputIndex, ref Coord writeCursor) {
-			List<ConsoleTile> line;
 			if (diff != null && diff.Start == Coord.NegativeOne) {
 				diff.Start = writeCursor;
 				UnityEngine.Debug.LogWarning("...needed to initialize diff.Start...");
@@ -139,43 +138,53 @@ namespace NonStandard.Cli {
 					if (writeCursor.col < 0) {
 						throw new Exception("negative column? " + writeCursor + " trying to write " + text.Length + " chars: " + text);
 					}
-					PrintCharacter(c, diff, ref writeCursor, ref inputIndex);
+					ConsoleTile consoleTile = currentDefaultTile.CloneWithLetter(c);
+					if (diff != null) {
+						PrintTile(consoleTile, diff, ref writeCursor, ref inputIndex);
+					} else {
+						PrintTile(consoleTile, ref writeCursor);
+					}
 				}
 				if (writeCursor.col >= size.col) { size.col = (short)(writeCursor.col + 1); }
 			}
 			size.row = (short)Math.Max(lines.Count, writeCursor.row + 1);
 		}
-
-		private void PrintCharacter(char c, ConsoleDiff diff, ref Coord writeCursor, ref int inputIndex) {
+		private void PrintTile(ConsoleTile c, ConsoleDiff diff, ref Coord writeCursor, ref int inputIndex) {
+			List<ConsoleTile> line = lines[writeCursor.row];
+			// calculate how much space this character should take on the line
+			ConsoleTile thisLetter = GetPrintable(c, writeCursor, out short letterWidth, out short cursorSkip);
+			int endOfChange = writeCursor.col + letterWidth + cursorSkip;
+			for (int s = writeCursor.col; s < endOfChange; ++s) {
+				if (s >= line.Count) {
+					line.Add(currentDefaultTile);
+				}
+			}
+			EnsureSufficientColumns(line, writeCursor.col + letterWidth);//while (writeCursor.col + letterWidth > line.Count) { line.Add(currentDefaultTile); }
+			diff.Insert(inputIndex, thisLetter, this, ref writeCursor);
+			++inputIndex;
+		}
+		public void PrintTile(ConsoleTile c, ref Coord writeCursor) {
 			List<ConsoleTile> line = lines[writeCursor.row];
 			// calculate how much space this character should take on the line
 			ConsoleTile thisLetter = GetPrintable(c, writeCursor, out short letterWidth, out short cursorSkip);
 			int endOfChange = writeCursor.col + letterWidth + cursorSkip;
 			for (int s = writeCursor.col; s < endOfChange; ++s) {
 				if (s < line.Count) {
-					if (diff == null) {
-						line[s] = currentDefaultTile;
-					}
-				} else 
-				if (s >= line.Count) {
+					line[s] = currentDefaultTile;
+				} else if (s >= line.Count) {
 					line.Add(currentDefaultTile);
 				}
 			}
 			EnsureSufficientColumns(line, writeCursor.col + letterWidth);//while (writeCursor.col + letterWidth > line.Count) { line.Add(currentDefaultTile); }
-			if (diff != null) {
-				diff.Insert(inputIndex, thisLetter, this, ref writeCursor);
-				++inputIndex;
+			writeCursor.col += cursorSkip;
+			if (writeCursor.col < line.Count) {
+				line[writeCursor.col] = thisLetter;
+			} else if (writeCursor.col == line.Count) {
+				line.Add(thisLetter);
 			} else {
-				writeCursor.col += cursorSkip;
-				if (writeCursor.col < line.Count) {
-					line[writeCursor.col] = thisLetter;
-				} else if (writeCursor.col == line.Count) {
-					line.Add(thisLetter);
-				} else {
-					throw new Exception("Unable to add letter beyond the length of the line!");
-				}
-				writeCursor.col += letterWidth;
+				throw new Exception("Unable to add letter beyond the length of the line!");
 			}
+			writeCursor.col += letterWidth;
 		}
 
 		public void EnsureSufficientLines(int lineCount) {
@@ -201,17 +210,18 @@ namespace NonStandard.Cli {
 		/// <param name="c">character to print</param>
 		/// <param name="letterWidth">how far to move after printing the <see cref="ConsoleTile"/></param>
 		/// <param name="moveBefore">how far to move before printing the <see cref="ConsoleTile"/></param>
+		/// <param name="currentDefaultTile">used to determine color</param>
 		/// <returns></returns>
-		public ConsoleTile GetPrintable(char c, Coord cursor, out short letterWidth, out short moveBefore) {
-			ConsoleTile thisLetter = currentDefaultTile;
+		public ConsoleTile GetPrintable(ConsoleTile c, Coord cursor, out short letterWidth, out short moveBefore) {
+			ConsoleTile thisLetter = c;
 			moveBefore = 0;
-			switch (c) {
+			switch (c.Letter) {
 			case '\b':
-				thisLetter.Set(' ', currentDefaultTile.Fore, currentDefaultTile.Back);
+				thisLetter.Set(' ', c.Fore, c.Back);
 				letterWidth = 0;
 				return thisLetter;
 			case '\t':
-				thisLetter.Set('t', currentDefaultTile.Back, currentDefaultTile.Fore);
+				thisLetter.Set('t', c.Back, c.Fore);
 				letterWidth = (short)(spacesPerTab - (cursor.col % spacesPerTab));//1;//
 				//moveBefore = (short)(spacesPerTab - (writeCursor.col % spacesPerTab) - 1);
 				return thisLetter;

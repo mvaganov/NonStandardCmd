@@ -6,7 +6,7 @@ using System.Collections.Generic;
 namespace NonStandard.Commands {
 	public partial class Commander {
 		public static class Cmd_Help {
-			public static byte type = (byte)ConsoleColor.Green;
+			public static byte type = (byte)ConsoleColor.Cyan;
 			public static byte error = (byte)ConsoleColor.Red;
 			public static byte command = (byte)ConsoleColor.Magenta;
 			public static byte argument = (byte)ConsoleColor.Yellow;

@@ -88,6 +88,14 @@ namespace NonStandard.Cli {
 			}
 			textNeedsRefresh = true;
 		}
+		public void RefreshInputText() {
+			for (int i = 0; i < input.delta.Count; i++) {
+				ConsoleDiffUnit consoleDiffUnit = input.delta[i];
+				Coord cursor = consoleDiffUnit.coord;
+				//body.Write(consoleDiffUnit.next.Letter.ToString(), null, ref writeIndex, ref cursor);
+				body.PrintTile(consoleDiffUnit.next, ref cursor);
+			}
+		}
 		public void WriteLine(string text) { Write(text + "\n"); }
 
 		public void RefreshCursorValid() {

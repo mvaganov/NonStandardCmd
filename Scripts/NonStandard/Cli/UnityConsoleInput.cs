@@ -17,7 +17,7 @@ namespace NonStandard.Cli {
 		/// </summary>
 		protected StringBuilder _keyBuffer = new StringBuilder();
 
-		protected List<ConsoleDiffUnit> _replaced = new List<ConsoleDiffUnit>();
+		//protected List<ConsoleDiffUnit> _replaced = new List<ConsoleDiffUnit>();
 
 		protected int _indexInInputBuffer = 0;
 		/// <summary>
@@ -26,11 +26,13 @@ namespace NonStandard.Cli {
 		protected Dictionary<KeyControl,int> keysDown = new Dictionary<KeyControl,int>();
 		internal string _pastedText;
 
-		public Color inputColor = new Color(0, 1, 0);
+		public Color activeInputColor = new Color(0, 1, 1);
+		public Color submittedInputColor = new Color(0, 1, 0);
 		/// <summary>
 		/// the color code to use for user input. will be set during initialization
 		/// </summary>
-		private int inputColorCode = -1;
+		private int activeInputColorCode = -1;
+		private int submittedInputColorCode = -1;
 
 		Dictionary<KeyControl, KMap> _keyMap = null;
 		[Tooltip("each of these will be prefixed by \"<Keyboard>/\" and added as a key bind for "+nameof(KeyInput))]
@@ -151,6 +153,12 @@ namespace NonStandard.Cli {
 		public void FinishCurrentInput() {
 			string processedInput = ProcessInput(_keyBuffer.ToString());
 			//Show.Log(_inputBuffer.ToString().StringifySmall()+" -> "+processedInput.StringifySmall());
+			List<ConsoleDiffUnit> characterDifferences = console.io.input.delta;
+			for(int i = 0; i < characterDifferences.Count; ++i) {
+				characterDifferences[i] = characterDifferences[i].WithDifferentColor((byte)submittedInputColorCode);
+			}
+			console.io.RefreshInputText();
+			console.io.input.Clear();
 			_keyBuffer.Clear();
 			_indexInInputBuffer = 0;
 			console.Write("\n");
@@ -182,7 +190,7 @@ namespace NonStandard.Cli {
 		public void ShiftWindowLeft() { MovWin(Coord.Left); }
 		public void ShiftWindowDown() { MovWin(Coord.Down); }
 		public void ShiftWindowRight() { MovWin(Coord.Right); }
-		private int AddStr(StringBuilder sb, int index, string str) {
+		private static int AddStr(StringBuilder sb, int index, string str) {
 			//Debug.Log("buffer index: "+index);
 			if (index >= sb.Length) {
 				sb.Append(str);
@@ -237,13 +245,14 @@ namespace NonStandard.Cli {
 		}
 
 		private void Start() {
-			inputColorCode = console.AddConsoleColorPalette(inputColor);
+			activeInputColorCode = console.AddConsoleColorPalette(activeInputColor);
+			submittedInputColorCode = console.AddConsoleColorPalette(submittedInputColor);
 			console.Write("testing");
 		}
 		public void WriteInputText(string inputText) {
-			if (inputColorCode > 0) { console.io.PushForeColor((byte)inputColorCode); }
+			if (activeInputColorCode > 0) { console.io.PushForeColor((byte)activeInputColorCode); }
 			console.io.WriteInput(inputText);
-			if (inputColorCode > 0) { console.io.PopForeColor(); }
+			if (activeInputColorCode > 0) { console.io.PopForeColor(); }
 		}
 		void Update() {
 			string txt = _keyBuffer.ToString();
