@@ -26,8 +26,9 @@ namespace NonStandard.Cli {
 		protected Dictionary<KeyControl,int> keysDown = new Dictionary<KeyControl,int>();
 		internal string _pastedText;
 
-		public Color activeInputColor = new Color(0, 1, 1);
-		public Color submittedInputColor = new Color(0, 1, 0);
+		public Color activeInputColor = new Color(0.25f, 0.75f, 1);
+		public Color correctInput = new Color(0, 0.75f, 0);
+		public Color invalidInput = new Color(0.75f, 0, 0); // TODO
 		/// <summary>
 		/// the color code to use for user input. will be set during initialization
 		/// </summary>
@@ -246,7 +247,7 @@ namespace NonStandard.Cli {
 
 		private void Start() {
 			activeInputColorCode = console.AddConsoleColorPalette(activeInputColor);
-			submittedInputColorCode = console.AddConsoleColorPalette(submittedInputColor);
+			submittedInputColorCode = console.AddConsoleColorPalette(correctInput);
 			console.Write("testing");
 		}
 		public void WriteInputText(string inputText) {
