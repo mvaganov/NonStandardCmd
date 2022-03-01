@@ -12,23 +12,22 @@ namespace NonStandard.Cli {
 		internal bool textNeedsRefresh = false;
 		public CursorState cursor;
 		public DisplayWindowSettings Window = new DisplayWindowSettings();
-		internal ConsoleBody body = new ConsoleBody();
-		public ConsoleDiff input = new ConsoleDiff();
+		private ConsoleBody _output = new ConsoleBody();
+		private ConsoleDiff _input = new ConsoleDiff();
 		/// <summary>
 		/// color of text being written, as a stack (enables push/pop without color state logic elsewehere).
 		/// </summary>
 		private List<byte> _colorStack = new List<byte>();
-		/// <summary>
-		/// the complete input phrase being entered right now; the complete command being typed.
-		/// </summary>
-		protected StringBuilder _inputBuffer = new StringBuilder();
+
+		public ConsoleDiff Input => _input;
+		public ConsoleBody Output => _output;
 
 		public ConsoleIo() {
-			body = new ConsoleBody();
+			_output = new ConsoleBody();
 			Window = new DisplayWindowSettings();
 		}
 		public void Init() {
-			Window.body = body;
+			Window.body = _output;
 		}
 
 		public Coord Cursor {
@@ -43,12 +42,12 @@ namespace NonStandard.Cli {
 		}
 		public int WindowHeight { get => Window.Height; set => Window.Height = value; }
 		public int WindowWidth { get => Window.Width; set => Window.Width = value; }
-		public ConsoleColor ForegoundColor { get => body.currentDefaultTile.Fore; set => body.currentDefaultTile.Fore = value; }
-		public ConsoleColor BackgroundColor { get => body.currentDefaultTile.Back; set => body.currentDefaultTile.Back = value; }
-		public byte ForeColor { get => body.currentDefaultTile.fore; set => body.currentDefaultTile.fore = value; }
-		public byte BackColor { get => body.currentDefaultTile.back; set => body.currentDefaultTile.back = value; }
-		public int BufferHeight => body.Size.Y;
-		public int BufferWidth => body.Size.X;
+		public ConsoleColor ForegoundColor { get => _output.currentDefaultTile.Fore; set => _output.currentDefaultTile.Fore = value; }
+		public ConsoleColor BackgroundColor { get => _output.currentDefaultTile.Back; set => _output.currentDefaultTile.Back = value; }
+		public byte ForeColor { get => _output.currentDefaultTile.fore; set => _output.currentDefaultTile.fore = value; }
+		public byte BackColor { get => _output.currentDefaultTile.back; set => _output.currentDefaultTile.back = value; }
+		public int BufferHeight => _output.Size.Y;
+		public int BufferWidth => _output.Size.X;
 		public int CursorLeft { get => cursor.position.Col; set => cursor.position.Col = (value); }
 		public int CursorTop { get => cursor.position.Row; set => cursor.position.Row = (value); }
 
@@ -63,37 +62,36 @@ namespace NonStandard.Cli {
 			}
 		}
 
-		public void ResetColor() { body.currentDefaultTile = body.defaultColors; }
+		public void ResetColor() { _output.currentDefaultTile = _output.defaultColors; }
 
 		public void SetAt(Coord position, ConsoleTile tile) {
-			body.SetAt(position, tile);
+			_output.SetAt(position, tile);
 		}
 
 		public void Write(char c) { Write(c.ToString()); }
 		public void Write(object o) { Write(o.ToString()); }
 		public void Write(string text) { int a = 0; Write(text, null, ref a); }
 		public void WriteInput(string inputText) {
-			Write(inputText, input, ref cursor.indexInInput);
-			_inputBuffer.Append(inputText);
+			Write(inputText, _input, ref cursor.indexInInput);
 		}
 		public void Write(string text, ConsoleDiff input, ref int inputIndex) {
-			Coord oldSize = body.Size;
+			Coord oldSize = _output.Size;
 			if (input != null && input.Start == Coord.NegativeOne) {
 				input.Start = Cursor;
 			}
-			body.Write(text, input, ref inputIndex, ref cursor.position);
-			if (body.Size != oldSize) {
+			_output.Write(text, input, ref inputIndex, ref cursor.position);
+			if (_output.Size != oldSize) {
 				//Show.Log("window update");
 				Window.UpdatePosition();
 			}
 			textNeedsRefresh = true;
 		}
 		public void RefreshInputText() {
-			for (int i = 0; i < input.delta.Count; i++) {
-				ConsoleDiffUnit consoleDiffUnit = input.delta[i];
+			for (int i = 0; i < _input.delta.Count; i++) {
+				ConsoleDiffUnit consoleDiffUnit = _input.delta[i];
 				Coord cursor = consoleDiffUnit.coord;
 				//body.Write(consoleDiffUnit.next.Letter.ToString(), null, ref writeIndex, ref cursor);
-				body.PrintTile(consoleDiffUnit.next, ref cursor);
+				_output.PrintTile(consoleDiffUnit.next, ref cursor);
 			}
 		}
 		public void WriteLine(string text) { Write(text + "\n"); }
@@ -105,11 +103,11 @@ namespace NonStandard.Cli {
 			if (Cursor.row < 0) {
 				Cursor = new Coord(Cursor.col, 0);
 			}
-			cursor.validInputIndex = input.TryGetIndexOf(Cursor, out cursor.indexInInput);
+			cursor.validInputIndex = _input.TryGetIndexOf(Cursor, out cursor.indexInInput);
 		}
 		public void RestartInput() {
 			cursor.indexInInput = 0;
-			input.Start = cursor.position;
+			_input.Start = cursor.position;
 		}
 
 		[System.Serializable] public class CursorState {

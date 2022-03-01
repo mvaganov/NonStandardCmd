@@ -13,7 +13,7 @@ namespace NonStandard.Cli {
 	public class UnityConsoleInput : MonoBehaviour {
 		private UnityConsole console;
 		/// <summary>
-		/// very short-term key storage, processed and added to the <see cref="_inputBuffer"/> each update
+		/// very short-term key storage, processed and added to the <see cref="UnityConsole.io"/> each update
 		/// </summary>
 		protected StringBuilder _keyBuffer = new StringBuilder();
 
@@ -154,13 +154,13 @@ namespace NonStandard.Cli {
 		public void FinishCurrentInput() {
 			string processedInput = ProcessInput(_keyBuffer.ToString());
 			//Show.Log(_inputBuffer.ToString().StringifySmall()+" -> "+processedInput.StringifySmall());
-			List<ConsoleDiffUnit> characterDifferences = console.io.input.delta;
+			List<ConsoleDiffUnit> characterDifferences = console.io.Input.delta;
 			for(int i = 0; i < characterDifferences.Count; ++i) {
 				characterDifferences[i] = characterDifferences[i].WithDifferentColor((byte)submittedInputColorCode);
 			}
 			console.io.RefreshInputText();
-			console.io.input.Clear();
-			_keyBuffer.Clear();
+			//Debug.Log("simple input: " + console.io.Input.ToSimpleString());
+			console.io.Input.Clear();
 			_indexInInputBuffer = 0;
 			console.Write("\n");
 			console.io.RestartInput();

@@ -13,13 +13,14 @@ namespace NonStandard.Cli {
 			ConsoleColor.DarkGray, ConsoleColor.DarkCyan, ConsoleColor.DarkMagenta, ConsoleColor.DarkYellow,
 			ConsoleColor.DarkRed, ConsoleColor.DarkGreen, ConsoleColor.DarkBlue,
 		};
+
 		/// <summary>
 		/// allows exceptions to be made for specific otherwise unprintable characters to be printed
 		/// </summary>
-		public Dictionary<char, char> printableCharacters = new Dictionary<char, char>();
+		public Dictionary<char, ConsoleTile> printableCharacters = new Dictionary<char, ConsoleTile>();
 		public List<List<ConsoleTile>> lines = new List<List<ConsoleTile>>();
 		public Coord size;
-		public bool CursorAllowedInEmptyAreaInRow = false;
+
 		public override string ToString() {
 			StringBuilder sb = new StringBuilder();
 			for(int row = 0; row < lines.Count; ++row) {
@@ -36,13 +37,16 @@ namespace NonStandard.Cli {
 			}
 			return sb.ToString();
 		}
+
 		public Coord Size {
 			get => size;
 		}
+
 		public void Clear() {
 			size = Coord.Zero;
 			lines.Clear();
 		}
+
 		public static void ParseColorSequenceDelimeter(string text, ref int i, out byte foreColor, out byte backColor) {
 			foreColor = Col.DefaultColorIndex;
 			backColor = Col.DefaultColorIndex;
@@ -149,6 +153,7 @@ namespace NonStandard.Cli {
 			}
 			size.row = (short)Math.Max(lines.Count, writeCursor.row + 1);
 		}
+
 		private void PrintTile(ConsoleTile c, ConsoleDiff diff, ref Coord writeCursor, ref int inputIndex) {
 			List<ConsoleTile> line = lines[writeCursor.row];
 			// calculate how much space this character should take on the line
@@ -163,6 +168,7 @@ namespace NonStandard.Cli {
 			diff.Insert(inputIndex, thisLetter, this, ref writeCursor);
 			++inputIndex;
 		}
+
 		public void PrintTile(ConsoleTile c, ref Coord writeCursor) {
 			List<ConsoleTile> line = lines[writeCursor.row];
 			// calculate how much space this character should take on the line
@@ -190,6 +196,7 @@ namespace NonStandard.Cli {
 		public void EnsureSufficientLines(int lineCount) {
 			while (lineCount > lines.Count) { lines.Add(new List<ConsoleTile>()); }
 		}
+
 		public void EnsureSufficientColumns(List<ConsoleTile> line, int columnCount) {
 			while (columnCount > line.Count) { line.Add(currentDefaultTile); }
 		}
@@ -230,8 +237,8 @@ namespace NonStandard.Cli {
 				if (c >= 32 && c < 128) {
 					thisLetter.Letter = c;
 				} else {
-					if (printableCharacters.TryGetValue(c, out char printableAs)) {
-						thisLetter.Letter = printableAs;
+					if (printableCharacters.TryGetValue(c, out ConsoleTile printableAs)) {
+						thisLetter = printableAs;
 					} else {
 						int weirdColor = (c / 32) % unprintableColors.Length;
 						thisLetter.Letter = CharExtension.ConvertToHexadecimalPattern(c);

@@ -210,7 +210,7 @@ namespace NonStandard.Cli {
 		public Coord GetCoord(int inputIndex) {
 			if (inputIndex < 0) return Start;
 			if (inputIndex >= delta.Count) { return FinalIndexCoord(); }
-			UnityEngine.Debug.Log("not end, not start: "+inputIndex+":"+ delta[inputIndex].coord);
+			//UnityEngine.Debug.Log("not end, not start: "+inputIndex+":"+ delta[inputIndex].coord);
 			return delta[inputIndex].coord;
 		}
 

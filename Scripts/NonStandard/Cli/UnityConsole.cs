@@ -19,6 +19,9 @@ namespace NonStandard.Cli {
 		public ColorSettings colorSettings = new ColorSettings();
 		public CharSettings defaultEmptyCharacter = new CharSettings();
 
+		public ConsoleDiff Input => io.Input;
+		public ConsoleBody Output => io.Output;
+
 		public struct Tile {
 			public ColorRGBA color;
 			public float height;
@@ -133,7 +136,7 @@ namespace NonStandard.Cli {
 		public int AddConsoleColorPalette(ColorRGBA colorRgba) { return colorSettings.AddConsoleColor(colorRgba); }
 		public int GetConsoleColorPaletteCount() { return colorSettings.ConsoleColorPalette.Count; }
 		public ColorRGBA GetConsoleColor(int code, bool foreground) {
-			if(code < 0 || code == Col.DefaultColorIndex) { code = foreground ? io.body.defaultColors.fore : io.body.defaultColors.back; }
+			if(code < 0 || code == Col.DefaultColorIndex) { code = foreground ? Output.defaultColors.fore : Output.defaultColors.back; }
 			//if(code < 0 || code >= colorSettings.ConsoleColorPalette.Count) {
 			//	Show.Log(code + "? max is "+ colorSettings.ConsoleColorPalette.Count);
 			//}
@@ -196,13 +199,13 @@ namespace NonStandard.Cli {
 				cursorUi.RefreshCursorPosition(this);
 				RefreshText();
 			}
-			nextText = io.input.ToSimpleString();
-			prevText = io.input.ToSimpleStringPrev();
+			nextText = io.Input.ToSimpleString();
+			prevText = io.Input.ToSimpleStringPrev();
 		}
 
 		public void RefreshText() {
 			CoordRect limit = io.Window.Limit;
-			CalculateText(io.body, limit, foreTile, true, colorSettings.foregroundAlpha);
+			CalculateText(Output, limit, foreTile, true, colorSettings.foregroundAlpha);
 			DisplayCalculations calc = null;
 			if (io.Window.IsAutosizing && NeedsCalculation()) {
 				calc = new DisplayCalculations(this);
@@ -212,7 +215,7 @@ namespace NonStandard.Cli {
 				DoCalculation(calc);
 			}
 			if (charBack) {
-				CalculateText(io.body, limit, backTile, false, colorSettings.backgroundAlpha);
+				CalculateText(Output, limit, backTile, false, colorSettings.backgroundAlpha);
 				TransferToTMP(false, backTile);
 			}
 			cursorUi.RefreshCursorPosition(this);
