@@ -91,8 +91,45 @@ namespace NonStandard.Cli {
 			if (writeCursor.row < 0) { writeCursor.row = 0; }
 		}
 
-		public void Write(string text, ConsoleDiff diff, ref int inputIndex, ref Coord writeCursor) {
-			if (diff != null && diff.Start == Coord.NegativeOne) {
+		public void Write(string text, ref Coord writeCursor) {
+			for (int i = 0; i < text.Length; ++i) {
+				char c = text[i];
+				bool printCharacter = true;
+				switch (c) {
+					case Col.ColorSequenceDelim:
+						ParseColorSequenceDelimeter(text, ref i, out byte f, out byte b);
+						currentDefaultTile.fore = (f == Col.DefaultColorIndex) ? defaultColors.fore : f;
+						currentDefaultTile.back = (b == Col.DefaultColorIndex) ? defaultColors.back : b;
+						continue;
+					case '\b':
+						ConsoleBackspace(ref writeCursor);
+						printCharacter = false;
+						break;
+					case '\n':
+						++writeCursor.row;
+						writeCursor.col = 0;
+						printCharacter = false; // don't print, that will add a character to the end of the line
+						break;
+				}
+				EnsureSufficientLines(writeCursor.row + 1);
+				if (printCharacter) {
+					if (writeCursor.row >= lines.Count || writeCursor.row < 0) {
+						throw new Exception("bad write cursor state " + writeCursor + " with " + lines.Count + " rows");
+					}
+					if (writeCursor.col < 0) {
+						throw new Exception("negative column? " + writeCursor + " trying to write " + text.Length + " chars: " + text);
+					}
+					ConsoleTile consoleTile = currentDefaultTile.CloneWithLetter(c);
+					PrintTile(consoleTile, ref writeCursor);
+				}
+				if (writeCursor.col >= size.col) { size.col = (short)(writeCursor.col + 1); }
+			}
+			size.row = (short)Math.Max(lines.Count, writeCursor.row + 1);
+		}
+
+
+		public void Write(string text, ref Coord writeCursor, ConsoleDiff diff, ref int inputIndex) {
+			if (diff.Start == Coord.NegativeOne) {
 				diff.Start = writeCursor;
 				UnityEngine.Debug.LogWarning("...needed to initialize diff.Start...");
 			}
@@ -107,31 +144,24 @@ namespace NonStandard.Cli {
 						currentDefaultTile.back = (b == Col.DefaultColorIndex) ? defaultColors.back : b;
 						continue;
 					case '\b':
-						if (diff != null) {
-							if (inputIndex > 0) {
-								--inputIndex;
-								string s = diff.ToSimpleStringPrev().Substring(inputIndex);
-								//UnityEngine.Debug.Log("rewriting "+s);
-								diff.WritePrev(this, inputIndex, 1);
-								diff.RemoveAt(inputIndex, this);
-								writeCursor = diff.GetCoord(inputIndex);
-								//UnityEngine.Debug.Log(writeCursor + " <- new writecursor, index " + inputIndex + " after backspace");
-							}
-						} else {
-							ConsoleBackspace(ref writeCursor);
-						}
+						if (inputIndex <= 0) { break; }
+						--inputIndex;
+						string s = diff.ToSimpleStringPrev().Substring(inputIndex);
+						//UnityEngine.Debug.Log("rewriting "+s);
+						diff.WritePrev(this, inputIndex, 1);
+						diff.RemoveAt(inputIndex, this);
+						writeCursor = diff.GetCoord(inputIndex);
+						//UnityEngine.Debug.Log(writeCursor + " <- new writecursor, index " + inputIndex + " after backspace");
 						printCharacter = false;
 						break;
 					case '\n':
 						++writeCursor.row;
 						writeCursor.col = 0;
 						printCharacter = false; // don't print, that will add a character to the end of the line
-						if (diff != null) {
-							diff.Insert(inputIndex, currentDefaultTile.CloneWithLetter('\n'), this, ref writeCursor);
-							++inputIndex;
-							writeCursor = diff.GetCoord(inputIndex);
-							UnityEngine.Debug.Log(writeCursor + " <- new writecursor, index " + inputIndex + " after newline");
-						}
+						diff.Insert(inputIndex, currentDefaultTile.CloneWithLetter('\n'), this, ref writeCursor);
+						++inputIndex;
+						writeCursor = diff.GetCoord(inputIndex);
+						UnityEngine.Debug.Log(writeCursor + " <- new writecursor, index " + inputIndex + " after newline");
 						break;
 				}
 				EnsureSufficientLines(writeCursor.row + 1);
@@ -143,11 +173,7 @@ namespace NonStandard.Cli {
 						throw new Exception("negative column? " + writeCursor + " trying to write " + text.Length + " chars: " + text);
 					}
 					ConsoleTile consoleTile = currentDefaultTile.CloneWithLetter(c);
-					if (diff != null) {
-						PrintTile(consoleTile, diff, ref writeCursor, ref inputIndex);
-					} else {
-						PrintTile(consoleTile, ref writeCursor);
-					}
+					PrintTile(consoleTile, diff, ref writeCursor, ref inputIndex);
 				}
 				if (writeCursor.col >= size.col) { size.col = (short)(writeCursor.col + 1); }
 			}

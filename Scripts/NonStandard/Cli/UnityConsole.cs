@@ -19,7 +19,7 @@ namespace NonStandard.Cli {
 		public ColorSettings colorSettings = new ColorSettings();
 		public CharSettings defaultEmptyCharacter = new CharSettings();
 
-		public ConsoleDiff Input => io.Input;
+		public ConsoleDiff Input { get => io.Input; set => io.Input = value; }
 		public ConsoleBody Output => io.Output;
 
 		public struct Tile {
@@ -202,6 +202,8 @@ namespace NonStandard.Cli {
 			nextText = io.Input.ToSimpleString();
 			prevText = io.Input.ToSimpleStringPrev();
 		}
+
+		public void RestartInput() => io.RestartInput();
 
 		public void RefreshText() {
 			CoordRect limit = io.Window.Limit;

@@ -19,7 +19,7 @@ namespace NonStandard.Cli {
 		/// </summary>
 		private List<byte> _colorStack = new List<byte>();
 
-		public ConsoleDiff Input => _input;
+		public ConsoleDiff Input { get => _input; set => _input = value; }
 		public ConsoleBody Output => _output;
 
 		public ConsoleIo() {
@@ -70,16 +70,24 @@ namespace NonStandard.Cli {
 
 		public void Write(char c) { Write(c.ToString()); }
 		public void Write(object o) { Write(o.ToString()); }
-		public void Write(string text) { int a = 0; Write(text, null, ref a); }
 		public void WriteInput(string inputText) {
 			Write(inputText, _input, ref cursor.indexInInput);
+		}
+		public void Write(string text) {
+			Coord oldSize = _output.Size;
+			_output.Write(text, ref cursor.position);
+			if (_output.Size != oldSize) {
+				//Show.Log("window update");
+				Window.UpdatePosition();
+			}
+			textNeedsRefresh = true;
 		}
 		public void Write(string text, ConsoleDiff input, ref int inputIndex) {
 			Coord oldSize = _output.Size;
 			if (input != null && input.Start == Coord.NegativeOne) {
 				input.Start = Cursor;
 			}
-			_output.Write(text, input, ref inputIndex, ref cursor.position);
+			_output.Write(text, ref cursor.position, input, ref inputIndex);
 			if (_output.Size != oldSize) {
 				//Show.Log("window update");
 				Window.UpdatePosition();

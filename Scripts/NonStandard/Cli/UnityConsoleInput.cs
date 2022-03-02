@@ -19,12 +19,12 @@ namespace NonStandard.Cli {
 
 		//protected List<ConsoleDiffUnit> _replaced = new List<ConsoleDiffUnit>();
 
-		protected int _indexInInputBuffer = 0;
 		/// <summary>
 		/// when a key was pressed
 		/// </summary>
 		protected Dictionary<KeyControl,int> keysDown = new Dictionary<KeyControl,int>();
 		internal string _pastedText;
+		ConsoleDiff lastInput = new ConsoleDiff();
 
 		public Color activeInputColor = new Color(0.25f, 0.75f, 1);
 		public Color correctInput = new Color(0, 0.75f, 0);
@@ -153,18 +153,23 @@ namespace NonStandard.Cli {
 
 		public void FinishCurrentInput() {
 			string processedInput = ProcessInput(_keyBuffer.ToString());
-			//Show.Log(_inputBuffer.ToString().StringifySmall()+" -> "+processedInput.StringifySmall());
-			List<ConsoleDiffUnit> characterDifferences = console.io.Input.delta;
-			for(int i = 0; i < characterDifferences.Count; ++i) {
-				characterDifferences[i] = characterDifferences[i].WithDifferentColor((byte)submittedInputColorCode);
-			}
-			console.io.RefreshInputText();
-			//Debug.Log("simple input: " + console.io.Input.ToSimpleString());
-			console.io.Input.Clear();
-			_indexInInputBuffer = 0;
+			ConsoleDiff temp = lastInput;
+			lastInput = console.Input;
+			console.Input = temp;
+			console.Input.Clear();
+			console.RestartInput();
+			Debug.Log("simple input: " + lastInput.ToSimpleString());
 			console.Write("\n");
 			console.io.RestartInput();
 			if (string.IsNullOrEmpty(processedInput)) { return; }
+		}
+
+		public void LastInputGood() {
+			List<ConsoleDiffUnit> characterDifferences = lastInput.delta;
+			for (int i = 0; i < characterDifferences.Count; ++i) {
+				characterDifferences[i] = characterDifferences[i].WithDifferentColor((byte)submittedInputColorCode);
+			}
+			console.io.RefreshInputText();
 		}
 
 #if UNITY_EDITOR
@@ -191,23 +196,18 @@ namespace NonStandard.Cli {
 		public void ShiftWindowLeft() { MovWin(Coord.Left); }
 		public void ShiftWindowDown() { MovWin(Coord.Down); }
 		public void ShiftWindowRight() { MovWin(Coord.Right); }
-		private static int AddStr(StringBuilder sb, int index, string str) {
+		private static int AddStr(StringBuilder sb, string str) {
 			//Debug.Log("buffer index: "+index);
-			if (index >= sb.Length) {
-				sb.Append(str);
-			} else {
-				sb.Insert(index, str);
-			}
+			sb.Append(str);
 			return str.Length;
 		}
-		private int ProcessKeyMappedTarget(object context, StringBuilder sb, int index, bool alsoResolveNonText = true) {
+		private int ProcessKeyMappedTarget(object context, StringBuilder sb, bool alsoResolveNonText = true) {
 			//Debug.Log(context);
-			if (index < 0) { index = sb.Length + 1 + index; }
 			switch (context) {
-				case char c:      return AddStr(sb, index, c.ToString());
-				case string str: return AddStr(sb, index, str);
-				case Action a: if (alsoResolveNonText) a.Invoke(); return 0;
-				case Func<string> fstr: return AddStr(sb, index, fstr.Invoke());
+				case char c:     return AddStr(sb, c.ToString());
+				case string str: return AddStr(sb, str);
+				case Action a: if (alsoResolveNonText) { a.Invoke(); } return 0;
+				case Func<string> fstr: return AddStr(sb, fstr.Invoke());
 			}
 			return 0;
 		}
@@ -224,7 +224,7 @@ namespace NonStandard.Cli {
 				else if (isShift) { target = kmap.shift; }
 				else if (isNormal) { target = kmap.normal; }
 				if (target != null) {
-					_indexInInputBuffer += ProcessKeyMappedTarget(target, _keyBuffer, _indexInInputBuffer, true);
+					ProcessKeyMappedTarget(target, _keyBuffer, true);
 				}
 			}
 		}
