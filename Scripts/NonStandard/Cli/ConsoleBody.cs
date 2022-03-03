@@ -90,35 +90,38 @@ namespace NonStandard.Cli {
 			}
 			if (writeCursor.row < 0) { writeCursor.row = 0; }
 		}
+		private void ConsoleNewline(ref Coord writeCursor) {
+			++writeCursor.row;
+			writeCursor.col = 0;
+		}
+
+		private void AssertValidWriteCursor(Coord writeCursor, string text) {
+			if (writeCursor.row >= lines.Count || writeCursor.row < 0) {
+				throw new Exception("bad write cursor state " + writeCursor + " with " + lines.Count + " rows");
+			}
+			if (writeCursor.col < 0) {
+				throw new Exception("negative column? " + writeCursor + " trying to write " + text.Length + " chars: " + text);
+			}
+		}
 
 		public void Write(string text, ref Coord writeCursor) {
 			for (int i = 0; i < text.Length; ++i) {
 				char c = text[i];
 				bool printCharacter = true;
 				switch (c) {
-					case Col.ColorSequenceDelim:
-						ParseColorSequenceDelimeter(text, ref i, out byte f, out byte b);
-						currentDefaultTile.fore = (f == Col.DefaultColorIndex) ? defaultColors.fore : f;
-						currentDefaultTile.back = (b == Col.DefaultColorIndex) ? defaultColors.back : b;
-						continue;
+					case Col.ColorSequenceDelim: ProcessColorSequenceDelimiter(text, i); continue;
 					case '\b':
-						ConsoleBackspace(ref writeCursor);
 						printCharacter = false;
+						ConsoleBackspace(ref writeCursor);
 						break;
 					case '\n':
-						++writeCursor.row;
-						writeCursor.col = 0;
 						printCharacter = false; // don't print, that will add a character to the end of the line
+						ConsoleNewline(ref writeCursor);
 						break;
 				}
 				EnsureSufficientLines(writeCursor.row + 1);
 				if (printCharacter) {
-					if (writeCursor.row >= lines.Count || writeCursor.row < 0) {
-						throw new Exception("bad write cursor state " + writeCursor + " with " + lines.Count + " rows");
-					}
-					if (writeCursor.col < 0) {
-						throw new Exception("negative column? " + writeCursor + " trying to write " + text.Length + " chars: " + text);
-					}
+					AssertValidWriteCursor(writeCursor, text);
 					ConsoleTile consoleTile = currentDefaultTile.CloneWithLetter(c);
 					PrintTile(consoleTile, ref writeCursor);
 				}
@@ -138,46 +141,31 @@ namespace NonStandard.Cli {
 				char c = text[i];
 				bool printCharacter = true;
 				switch (c) {
-					case Col.ColorSequenceDelim:
-						ParseColorSequenceDelimeter(text, ref i, out byte f, out byte b);
-						currentDefaultTile.fore = (f == Col.DefaultColorIndex) ? defaultColors.fore : f;
-						currentDefaultTile.back = (b == Col.DefaultColorIndex) ? defaultColors.back : b;
-						continue;
+					case Col.ColorSequenceDelim: ProcessColorSequenceDelimiter(text, i); continue;
 					case '\b':
-						if (inputIndex <= 0) { break; }
-						--inputIndex;
-						string s = diff.ToSimpleStringPrev().Substring(inputIndex);
-						//UnityEngine.Debug.Log("rewriting "+s);
-						diff.WritePrev(this, inputIndex, 1);
-						diff.RemoveAt(inputIndex, this);
-						writeCursor = diff.GetCoord(inputIndex);
-						//UnityEngine.Debug.Log(writeCursor + " <- new writecursor, index " + inputIndex + " after backspace");
 						printCharacter = false;
+						diff.InsertBackspace(this, ref writeCursor, ref inputIndex);
 						break;
 					case '\n':
-						++writeCursor.row;
-						writeCursor.col = 0;
 						printCharacter = false; // don't print, that will add a character to the end of the line
-						diff.Insert(inputIndex, currentDefaultTile.CloneWithLetter('\n'), this, ref writeCursor);
-						++inputIndex;
-						writeCursor = diff.GetCoord(inputIndex);
-						UnityEngine.Debug.Log(writeCursor + " <- new writecursor, index " + inputIndex + " after newline");
+						diff.Insert(ref inputIndex, currentDefaultTile.wLetter('\n'), this, ref writeCursor);
 						break;
 				}
 				EnsureSufficientLines(writeCursor.row + 1);
 				if (printCharacter) {
-					if (writeCursor.row >= lines.Count || writeCursor.row < 0) {
-						throw new Exception("bad write cursor state " + writeCursor + " with " + lines.Count + " rows");
-					}
-					if (writeCursor.col < 0) {
-						throw new Exception("negative column? " + writeCursor + " trying to write " + text.Length + " chars: " + text);
-					}
-					ConsoleTile consoleTile = currentDefaultTile.CloneWithLetter(c);
+					AssertValidWriteCursor(writeCursor, text);
+					ConsoleTile consoleTile = currentDefaultTile.wLetter(c);
 					PrintTile(consoleTile, diff, ref writeCursor, ref inputIndex);
 				}
 				if (writeCursor.col >= size.col) { size.col = (short)(writeCursor.col + 1); }
 			}
 			size.row = (short)Math.Max(lines.Count, writeCursor.row + 1);
+		}
+
+		private void ProcessColorSequenceDelimiter(string text, int i) {
+			ParseColorSequenceDelimeter(text, ref i, out byte f, out byte b);
+			currentDefaultTile.fore = (f == Col.DefaultColorIndex) ? defaultColors.fore : f;
+			currentDefaultTile.back = (b == Col.DefaultColorIndex) ? defaultColors.back : b;
 		}
 
 		private void PrintTile(ConsoleTile c, ConsoleDiff diff, ref Coord writeCursor, ref int inputIndex) {
@@ -191,8 +179,7 @@ namespace NonStandard.Cli {
 				}
 			}
 			EnsureSufficientColumns(line, writeCursor.col + letterWidth);//while (writeCursor.col + letterWidth > line.Count) { line.Add(currentDefaultTile); }
-			diff.Insert(inputIndex, thisLetter, this, ref writeCursor);
-			++inputIndex;
+			diff.Insert(ref inputIndex, thisLetter, this, ref writeCursor);
 		}
 
 		public void PrintTile(ConsoleTile c, ref Coord writeCursor) {

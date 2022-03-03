@@ -34,6 +34,7 @@ namespace NonStandard.Cli {
 		/// </summary>
 		private int activeInputColorCode = -1;
 		private int submittedInputColorCode = -1;
+		private int errorInputColorCode = -1;
 
 		Dictionary<KeyControl, KMap> _keyMap = null;
 		[Tooltip("each of these will be prefixed by \"<Keyboard>/\" and added as a key bind for "+nameof(KeyInput))]
@@ -47,7 +48,7 @@ namespace NonStandard.Cli {
 			"upArrow","leftArrow","downArrow","rightArrow",
 			//"numpad1","numpad2","numpad3","numpad4","numpad5","numpad6","numpad7","numpad8","numpad9","numpad0",
 		};
-
+		public string LastInputText => lastInput.ToSimpleString();
 		public bool KeyAvailable => keysDown.Count > 0;
 
 		private Dictionary<KeyControl, KMap> _KeyMap() => _keyMap != null
@@ -158,18 +159,19 @@ namespace NonStandard.Cli {
 			console.Input = temp;
 			console.Input.Clear();
 			console.RestartInput();
-			Debug.Log("simple input: " + lastInput.ToSimpleString());
+			Debug.Log("simple input: " + LastInputText);
 			console.Write("\n");
 			console.io.RestartInput();
-			if (string.IsNullOrEmpty(processedInput)) { return; }
+			RefreshLastInputError();
 		}
-
-		public void LastInputGood() {
+		public void RefreshLastInputGood() => RefreshLastInput(submittedInputColorCode);
+		public void RefreshLastInputError() => RefreshLastInput(errorInputColorCode);
+		public void RefreshLastInput(int colorCode) {
 			List<ConsoleDiffUnit> characterDifferences = lastInput.delta;
 			for (int i = 0; i < characterDifferences.Count; ++i) {
-				characterDifferences[i] = characterDifferences[i].WithDifferentColor((byte)submittedInputColorCode);
+				characterDifferences[i] = characterDifferences[i].WithDifferentColor((byte)colorCode);
 			}
-			console.io.RefreshInputText();
+			console.io.RefreshInput(lastInput);
 		}
 
 #if UNITY_EDITOR
@@ -248,6 +250,7 @@ namespace NonStandard.Cli {
 		private void Start() {
 			activeInputColorCode = console.AddConsoleColorPalette(activeInputColor);
 			submittedInputColorCode = console.AddConsoleColorPalette(correctInput);
+			errorInputColorCode = console.AddConsoleColorPalette(invalidInput);
 			console.Write("testing");
 		}
 		public void WriteInputText(string inputText) {

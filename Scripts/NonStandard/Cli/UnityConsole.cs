@@ -7,9 +7,8 @@ using NonStandard.Extension;
 
 namespace NonStandard.Cli {
 	public class UnityConsole : MonoBehaviour {
-		public string nextText, prevText;
-		public ConsoleIo io;
 		public TMP_InputField inputField;
+		public ConsoleIo io;
 		TMP_Text text;
 		TMP_Text charBack;
 		public UnityConsoleCursor cursorUi = new UnityConsoleCursor();
@@ -199,8 +198,6 @@ namespace NonStandard.Cli {
 				cursorUi.RefreshCursorPosition(this);
 				RefreshText();
 			}
-			nextText = io.Input.ToSimpleString();
-			prevText = io.Input.ToSimpleStringPrev();
 		}
 
 		public void RestartInput() => io.RestartInput();

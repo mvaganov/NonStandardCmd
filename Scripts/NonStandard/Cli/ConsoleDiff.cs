@@ -18,15 +18,18 @@ namespace NonStandard.Cli {
 		/// <summary>
 		/// returns how many characters were changed after the given index
 		/// </summary>
-		public void Insert(int index, ConsoleTile tile, ConsoleBody body, ref Coord Cursor) {
+		public void Insert(ref int index, ConsoleTile tile, ConsoleBody body, ref Coord Cursor) {
 			if (tile.Letter == '\n') {
 				InsertNewline(index, body);
+				++index;
+				Cursor = GetCoord(index);
 				if (!inputArea.IsValid) {
 					Cursor = new Coord(0, Cursor.y + 1);
 					UnityEngine.Debug.Log("cursor is beyond acceptible area");
 				} else {
 					Cursor = new Coord(inputArea.min.col, Cursor.y + 1);
 				}
+				UnityEngine.Debug.Log(Cursor + " <- new writecursor, index " + index + " after newline");
 				return;
 			}
 			int tilesRemainingInRow = CountCharsInRow(index);
@@ -151,6 +154,17 @@ namespace NonStandard.Cli {
 			index = delta.Count;
 			return true;
 			//throw new Exception("should return before this point");
+		}
+
+		internal void InsertBackspace(ConsoleBody body, ref Coord writeCursor, ref int inputIndex) {
+			if (inputIndex <= 0) { return; }
+			--inputIndex;
+			//string s = diff.ToSimpleStringPrev().Substring(inputIndex);
+			//UnityEngine.Debug.Log("rewriting "+s);
+			WritePrev(body, inputIndex, 1);
+			RemoveAt(inputIndex, body);
+			writeCursor = GetCoord(inputIndex);
+			//UnityEngine.Debug.Log(writeCursor + " <- new writecursor, index " + inputIndex + " after backspace");
 		}
 
 		public Coord FinalIndexCoord() {

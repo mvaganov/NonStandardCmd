@@ -95,8 +95,11 @@ namespace NonStandard.Cli {
 			textNeedsRefresh = true;
 		}
 		public void RefreshInputText() {
-			for (int i = 0; i < _input.delta.Count; i++) {
-				ConsoleDiffUnit consoleDiffUnit = _input.delta[i];
+			RefreshInput(_input);
+		}
+		public void RefreshInput(ConsoleDiff diff) {
+			for (int i = 0; i < diff.delta.Count; i++) {
+				ConsoleDiffUnit consoleDiffUnit = diff.delta[i];
 				Coord cursor = consoleDiffUnit.coord;
 				//body.Write(consoleDiffUnit.next.Letter.ToString(), null, ref writeIndex, ref cursor);
 				_output.PrintTile(consoleDiffUnit.next, ref cursor);

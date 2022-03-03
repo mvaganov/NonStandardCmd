@@ -68,8 +68,10 @@ namespace NonStandard.Cli {
 		public void Write() { ApplyColor(); Console.Write(Letter); }
 
 		public void Draw(ConsoleTile[,] screen, Coord offset) { screen.SetAt(offset, this); }
-		public ConsoleTile CloneWithLetter(char letter) => new ConsoleTile(letter, Fore, Back);
-		public ConsoleTile CloneWithForeColor(byte fore) => new ConsoleTile(Letter, fore, back);
+		public ConsoleTile CloneWithLetter(char letter) => wLetter(letter);
+		public ConsoleTile CloneWithForeColor(byte fore) => wForeColor(fore);
+		public ConsoleTile wLetter(char letter) => new ConsoleTile(letter, Fore, Back);
+		public ConsoleTile wForeColor(byte fore) => new ConsoleTile(Letter, fore, back);
 	}
 
 	/// <summary>
