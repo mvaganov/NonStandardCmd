@@ -5,8 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
+using UnityEngine.InputSystem.Layouts;
 
 namespace NonStandard.Cli {
 	[RequireComponent(typeof(UnityConsole)),RequireComponent(typeof(UserInput))]
@@ -109,6 +111,23 @@ namespace NonStandard.Cli {
 			[Keyboard.current.downArrowKey] = new KMap(new Action(MoveCursorDown), null),
 			[Keyboard.current.rightArrowKey] = new KMap(new Action(MoveCursorRight), null),
 		};
+
+		public enum KMapModifier { ExactlyNone = -1, Any = 0, Shift = 1, Ctrl = 2, Alt = 3, ShiftCtrl = 4, AltCtrl = 5, ShiftAlt = 6 }
+
+		// TODO populate with _KeyMap OnReset
+		[System.Serializable] public class KMapNormal {
+			[InputControl] public string key;
+			public KMapModifier modifier;
+			public string value;
+		}
+		[System.Serializable] public class KMapFunction {
+			[InputControl] public string key;
+			public KMapModifier modifier;
+			public UnityEvent action;
+		}
+		public KMapNormal[] kMapTest;
+		public KMapFunction[] kMapFuncTest;
+
 		private struct KMap {
 			public object normal, shift, ctrl;
 			public KMap(object n, object s = null, object c = null) { normal = n; shift = s; ctrl = c; }

@@ -5,6 +5,9 @@ using System;
 using System.Text;
 
 namespace NonStandard.Cli {
+	/// <summary>
+	/// logic for a command-line console, agnostic of rendering layer
+	/// </summary>
 	[Serializable] public class ConsoleBody {
 		public int spacesPerTab = 4;
 		public ConsoleTile defaultColors = new ConsoleTile(' ', ConsoleColor.Gray, ConsoleColor.Black);
@@ -107,17 +110,12 @@ namespace NonStandard.Cli {
 		public void Write(string text, ref Coord writeCursor) {
 			for (int i = 0; i < text.Length; ++i) {
 				char c = text[i];
-				bool printCharacter = true;
+				bool printCharacter = false;
 				switch (c) {
 					case Col.ColorSequenceDelim: ProcessColorSequenceDelimiter(text, i); continue;
-					case '\b':
-						printCharacter = false;
-						ConsoleBackspace(ref writeCursor);
-						break;
-					case '\n':
-						printCharacter = false; // don't print, that will add a character to the end of the line
-						ConsoleNewline(ref writeCursor);
-						break;
+					case '\b': ConsoleBackspace(ref writeCursor); break;
+					case '\n': ConsoleNewline(ref writeCursor); break;
+					default: printCharacter = true; break;
 				}
 				EnsureSufficientLines(writeCursor.row + 1);
 				if (printCharacter) {
@@ -130,7 +128,6 @@ namespace NonStandard.Cli {
 			size.row = (short)Math.Max(lines.Count, writeCursor.row + 1);
 		}
 
-
 		public void Write(string text, ref Coord writeCursor, ConsoleDiff diff, ref int inputIndex) {
 			if (diff.Start == Coord.NegativeOne) {
 				diff.Start = writeCursor;
@@ -139,17 +136,12 @@ namespace NonStandard.Cli {
 			//UnityEngine.Debug.Log("writing \'" + text + "\' at " + inputIndex + " " + writeCursor + "   " + diff);
 			for (int i = 0; i < text.Length; ++i) {
 				char c = text[i];
-				bool printCharacter = true;
+				bool printCharacter = false;
 				switch (c) {
 					case Col.ColorSequenceDelim: ProcessColorSequenceDelimiter(text, i); continue;
-					case '\b':
-						printCharacter = false;
-						diff.InsertBackspace(this, ref writeCursor, ref inputIndex);
-						break;
-					case '\n':
-						printCharacter = false; // don't print, that will add a character to the end of the line
-						diff.Insert(ref inputIndex, currentDefaultTile.wLetter('\n'), this, ref writeCursor);
-						break;
+					case '\b': diff.InsertBackspace(this, ref writeCursor, ref inputIndex); break;
+					case '\n': diff.Insert(ref inputIndex, currentDefaultTile.wLetter('\n'), this, ref writeCursor); break;
+					default: printCharacter = true; break;
 				}
 				EnsureSufficientLines(writeCursor.row + 1);
 				if (printCharacter) {
@@ -296,11 +288,11 @@ namespace NonStandard.Cli {
 			return true;
 		}
 
-		public void Draw(CoordRect location, Coord offset) {
+		public void ConsoleDraw(CoordRect location, Coord offset) {
 			location.ForEach(c => {
 				ConsoleTile tile = GetAt(c - offset);
 				c.SetConsoleCursorPosition();
-				tile.Write();
+				tile.ConsoleWrite();
 			});
 		}
 	}

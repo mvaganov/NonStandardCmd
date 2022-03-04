@@ -65,7 +65,7 @@ namespace NonStandard.Cli {
 		public static bool operator ==(ConsoleTile a, ConsoleTile b) { return a.Equals(b); }
 		public static bool operator !=(ConsoleTile a, ConsoleTile b) { return !a.Equals(b); }
 
-		public void Write() { ApplyColor(); Console.Write(Letter); }
+		public void ConsoleWrite() { ApplyColor(); Console.Write(Letter); }
 
 		public void Draw(ConsoleTile[,] screen, Coord offset) { screen.SetAt(offset, this); }
 		public ConsoleTile CloneWithLetter(char letter) => wLetter(letter);
