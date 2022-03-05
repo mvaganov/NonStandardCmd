@@ -19,10 +19,10 @@ namespace NonStandard.Cli {
 			UnityConsole console = GetComponent<UnityConsole>();
 			CommanderInstance.ParseCommand(new Commander.Instruction(text, this), console.Write, out Tokenizer t);
 			if (t?.errors?.Count > 0) {
-				console.io.PushForeColor(ConsoleColor.Red);
+				console.Console.PushForeColor(ConsoleColor.Red);
 				console.WriteLine(t.GetErrorString());
 				Show.Log(t.GetErrorString());
-				console.io.PopForeColor();
+				console.Console.PopForeColor();
 			}
 			WhenCommandRuns?.Invoke(text);
 		}
@@ -55,9 +55,9 @@ namespace NonStandard.Cli {
 		public void Cmd_Clear(Command.Exec e) {
 			UnityConsole console = GetComponent<UnityConsole>();
 			console.Output.Clear();
-			console.io.Cursor = Coord.Zero;
-			console.io.Window.viewRect.Position = Coord.Zero;
-			console.io.Window.UpdatePosition();
+			console.Console.Cursor = Coord.Zero;
+			console.Console.Window.viewRect.Position = Coord.Zero;
+			console.Console.Window.UpdatePosition();
 		}
 #if UNITY_EDITOR
 		public void Reset() {

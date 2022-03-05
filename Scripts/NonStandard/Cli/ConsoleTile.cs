@@ -31,7 +31,7 @@ namespace NonStandard.Cli {
 		}
 
 		static ConsoleTile() {
-			DefaultTile = new ConsoleTile('?', Console.ForegroundColor, Console.BackgroundColor);
+			DefaultTile = new ConsoleTile('?', System.Console.ForegroundColor, System.Console.BackgroundColor);
 			DeletedTile = new ConsoleTile('\b', (byte)0, 0);
 			EmptyTile = new ConsoleTile('\0', (byte)0, 0);
 		}
@@ -48,12 +48,12 @@ namespace NonStandard.Cli {
 		}
 
 		public bool IsColorCurrent() {
-			return Console.ForegroundColor == (ConsoleColor)fore && Console.BackgroundColor == (ConsoleColor)back;
+			return System.Console.ForegroundColor == (ConsoleColor)fore && System.Console.BackgroundColor == (ConsoleColor)back;
 		}
 
 		public void SetColors(ConsoleColor fore, ConsoleColor back) { Fore = fore; Back = back; }
 
-		public void ApplyColor() { Console.ForegroundColor = Fore; Console.BackgroundColor = Back; }
+		public void ApplyColor() { System.Console.ForegroundColor = Fore; System.Console.BackgroundColor = Back; }
 
 		public override string ToString() => $"[{Letter}]";
 		public override int GetHashCode() => fore * 0x00010000 + back * 0x01000000 + (int)Letter;
@@ -65,7 +65,7 @@ namespace NonStandard.Cli {
 		public static bool operator ==(ConsoleTile a, ConsoleTile b) { return a.Equals(b); }
 		public static bool operator !=(ConsoleTile a, ConsoleTile b) { return !a.Equals(b); }
 
-		public void ConsoleWrite() { ApplyColor(); Console.Write(Letter); }
+		public void ConsoleWrite() { ApplyColor(); System.Console.Write(Letter); }
 
 		public void Draw(ConsoleTile[,] screen, Coord offset) { screen.SetAt(offset, this); }
 		public ConsoleTile CloneWithLetter(char letter) => wLetter(letter);

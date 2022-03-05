@@ -8,7 +8,7 @@ namespace NonStandard.Cli {
 	/// <summary>
 	/// responsible for arranging and inserting console input into console output
 	/// </summary>
-	[System.Serializable] public class ConsoleIo {
+	[System.Serializable] public class Console {
 		internal bool textNeedsRefresh = false;
 		public CursorState cursor;
 		public DisplayWindowSettings Window = new DisplayWindowSettings();
@@ -22,7 +22,7 @@ namespace NonStandard.Cli {
 		public ConsoleDiff Input { get => _input; set => _input = value; }
 		public ConsoleBody Output => _output;
 
-		public ConsoleIo() {
+		public Console() {
 			_output = new ConsoleBody();
 			Window = new DisplayWindowSettings();
 		}
@@ -50,8 +50,6 @@ namespace NonStandard.Cli {
 		public int BufferWidth => _output.Size.X;
 		public int CursorLeft { get => cursor.position.Col; set => cursor.position.Col = (value); }
 		public int CursorTop { get => cursor.position.Row; set => cursor.position.Row = (value); }
-
-		public bool CursorVisible { get => cursor.cursorVisible; set => cursor.cursorVisible = value; }
 
 		public void PushForeColor(ConsoleColor c) { _colorStack.Add(ForeColor); ForegoundColor = c; }
 		public void PushForeColor(byte c) { _colorStack.Add(ForeColor); ForeColor = c; }
@@ -122,7 +120,6 @@ namespace NonStandard.Cli {
 		}
 
 		[System.Serializable] public class CursorState {
-			public bool cursorVisible = true;
 			public bool validInputIndex;
 			public Coord position;
 			public int indexInInput;
