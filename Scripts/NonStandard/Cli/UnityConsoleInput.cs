@@ -192,18 +192,6 @@ namespace NonStandard.Cli {
 				}
 			}
 		}
-		public List<KeyEventMap> specialKeys = null;
-		private KeyEventMap[] GetDefaultKeyEventMap() => new KeyEventMap[] {
-			new KeyEventMap("enter", KMapMod.None, new EventBind(this, nameof(FinishCurrentInput))),
-			new KeyEventMap("minus", KMapMod.Ctrl, new EventBind(this, nameof(DecreaseFontSize))),
-			new KeyEventMap("equals", KMapMod.Ctrl, new EventBind(this, nameof(IncreaseFontSize))),
-			new KeyEventMap("c", KMapMod.Ctrl, new EventBind(this, nameof(CopyToClipboard))),
-			new KeyEventMap("v", KMapMod.Ctrl, new EventBind(this, nameof(PasteFromClipboard))),
-			new KeyEventMap("upArrow", KMapMod.None, new EventBind(this, nameof(MoveCursorUp))),
-			new KeyEventMap("leftArrow", KMapMod.None, new EventBind(this, nameof(MoveCursorLeft))),
-			new KeyEventMap("downArrow", KMapMod.None, new EventBind(this, nameof(MoveCursorDown))),
-			new KeyEventMap("rightArrow", KMapMod.None, new EventBind(this, nameof(MoveCursorRight))),
-		};
 
 		public struct KMap {
 			public object press, shift, ctrl;
@@ -239,8 +227,8 @@ namespace NonStandard.Cli {
 		}
 		private void MovWin(Coord dir) { console.ScrollRenderWindow(dir); }
 
-		public void PasteFromClipboard(InputAction.CallbackContext c) => PasteFromClipboard();
-		public void CopyToClipboard(InputAction.CallbackContext c) => CopyToClipboard();
+		public void PasteFromClipboard(InputAction.CallbackContext c) { if (c.performed) PasteFromClipboard(); }
+		public void CopyToClipboard(InputAction.CallbackContext c) { if (c.performed) CopyToClipboard(); }
 		public void PasteFromClipboard() {
 			_pastedText = GUIUtility.systemCopyBuffer.Replace("\r","");
 			_keyBuffer.Append(_pastedText);
@@ -270,7 +258,7 @@ namespace NonStandard.Cli {
 			}
 			return finalString.ToString();
 		}
-		public void FinishCurrentInput(InputAction.CallbackContext c) => FinishCurrentInput();
+		public void FinishCurrentInput(InputAction.CallbackContext c) { if (c.performed) FinishCurrentInput(); }
 		public void FinishCurrentInput() {
 			string processedInput = ProcessInput(_keyBuffer.ToString());
 			ConsoleDiff temp = lastInput;
@@ -302,20 +290,9 @@ namespace NonStandard.Cli {
 			for (int i = 0; i < defaultKeyboardKeys.Length; i += 1) {
 				keyboardInputs[i] = KbPrefix + defaultKeyboardKeys[i];
 			}
-			specialKeys = new List<KeyEventMap>(GetDefaultKeyEventMap());
 
 			uinput.AddBindingIfMissing(new InputControlBinding("read keyboard input into the command line", "CmdLine/KeyInput",
 				ControlType.Button, new EventBind(this, nameof(KeyInput)), keyboardInputs));
-
-			//new KeyEventMap("enter", KMapMod.None, new EventBind(this, nameof(FinishCurrentInput))),
-			//new KeyEventMap("upArrow", KMapMod.None, new EventBind(this, nameof(MoveCursorUp))),
-			//new KeyEventMap("leftArrow", KMapMod.None, new EventBind(this, nameof(MoveCursorLeft))),
-			//new KeyEventMap("downArrow", KMapMod.None, new EventBind(this, nameof(MoveCursorDown))),
-			//new KeyEventMap("rightArrow", KMapMod.None, new EventBind(this, nameof(MoveCursorRight))),
-			//new KeyEventMap("minus", KMapMod.Ctrl, new EventBind(this, nameof(DecreaseFontSize))),
-			//new KeyEventMap("equals", KMapMod.Ctrl, new EventBind(this, nameof(IncreaseFontSize))),
-			//new KeyEventMap("c", KMapMod.Ctrl, new EventBind(this, nameof(CopyToClipboard))),
-			//new KeyEventMap("v", KMapMod.Ctrl, new EventBind(this, nameof(PasteFromClipboard))),
 
 			uinput.AddBindingIfMissing(new InputControlBinding("command line submit input", CmdLine+"/SubmitInput",
 				ControlType.Button, new EventBind(this, nameof(FinishCurrentInput)), KMap.Path("enter")));
@@ -372,19 +349,19 @@ namespace NonStandard.Cli {
 				} else {
 					uinput.DisableActionMap(mapName);
 				}
-				Debug.Log(mapName+" " + state + " via " + ctx.control.path + " " + ctx.phase);
+				//Debug.Log(mapName+" " + state + " via " + ctx.control.path + " " + ctx.phase);
 			}
 		}
-		public void IncreaseFontSize(InputAction.CallbackContext c) => IncreaseFontSize();
-		public void DecreaseFontSize(InputAction.CallbackContext c) => DecreaseFontSize();
-		public void MoveCursorUp(InputAction.CallbackContext c) => MoveCursorUp();
-		public void MoveCursorLeft(InputAction.CallbackContext c) => MoveCursorLeft();
-		public void MoveCursorDown(InputAction.CallbackContext c) => MoveCursorDown();
-		public void MoveCursorRight(InputAction.CallbackContext c) => MoveCursorRight();
-		public void ShiftWindowUp(InputAction.CallbackContext c) => ShiftWindowUp();
-		public void ShiftWindowLeft(InputAction.CallbackContext c) => ShiftWindowLeft();
-		public void ShiftWindowDown(InputAction.CallbackContext c) => ShiftWindowDown();
-		public void ShiftWindowRight(InputAction.CallbackContext c) => ShiftWindowRight();
+		public void IncreaseFontSize(InputAction.CallbackContext c) { if (c.performed) IncreaseFontSize(); }
+		public void DecreaseFontSize(InputAction.CallbackContext c) { if (c.performed) DecreaseFontSize(); }
+		public void MoveCursorUp(InputAction.CallbackContext c) { if (c.performed) MoveCursorUp(); }
+		public void MoveCursorLeft(InputAction.CallbackContext c) { if (c.performed) MoveCursorLeft(); }
+		public void MoveCursorDown(InputAction.CallbackContext c) { if (c.performed) MoveCursorDown(); }
+		public void MoveCursorRight(InputAction.CallbackContext c) { if (c.performed) MoveCursorRight(); }
+		public void ShiftWindowUp(InputAction.CallbackContext c) { if (c.performed) ShiftWindowUp(); }
+		public void ShiftWindowLeft(InputAction.CallbackContext c) { if (c.performed) ShiftWindowLeft(); }
+		public void ShiftWindowDown(InputAction.CallbackContext c) { if (c.performed) ShiftWindowDown(); }
+		public void ShiftWindowRight(InputAction.CallbackContext c) { if (c.performed) ShiftWindowRight(); }
 		public void IncreaseFontSize() { console.AddToFontSize(1); }
 		public void DecreaseFontSize() { console.AddToFontSize(-1); }
 		public void MoveCursorUp() { MovCur(Coord.Up); }
@@ -450,9 +427,6 @@ namespace NonStandard.Cli {
 			submittedInputColorCode = console.AddConsoleColorPalette(correctInput);
 			errorInputColorCode = console.AddConsoleColorPalette(invalidInput);
 			console.Write("testing");
-			for(int i = 0; i < specialKeys.Count; ++i) {
-				AddKeyEventMap(specialKeys[i]);
-			}
 		}
 		public void AddKeyEventMap(KeyEventMap kem) {
 			InputControl control = InputSystem.FindControl(kem.key);
