@@ -21,8 +21,8 @@ namespace NonStandard.Cli {
 		public ConsoleDiff Input { get => Console.Input; set => Console.Input = value; }
 		public ConsoleBody Output => Console.Output;
 		public bool CursorVisible {
-			get => cursorUi.cursor.gameObject.activeSelf;
-			set => cursorUi.cursor.gameObject.SetActive(value);
+			get => cursorUi.cursorObject.gameObject.activeSelf;
+			set => cursorUi.cursorObject.gameObject.SetActive(value);
 		}
 
 		public struct Tile {
@@ -33,22 +33,22 @@ namespace NonStandard.Cli {
 		}
 
 		[System.Serializable] public class UnityConsoleCursor {
-			public GameObject cursor;
+			public GameObject cursorObject;
 			Vector3[] cursorMeshPosition = new Vector3[4];
 			[HideInInspector] public Console.CursorState state;
 			public Vector3 CalculateCursorPosition() {
 				return (cursorMeshPosition[0] + cursorMeshPosition[1] + cursorMeshPosition[2] + cursorMeshPosition[3]) / 4;
 			}
 			public void RefreshCursorPosition(UnityConsole console) {
-				if (cursor == null) return;
+				if (cursorObject == null) return;
 				if (console.CursorVisible && state.indexInConsole >= 0) {
-					Transform t = cursor.transform;
+					Transform t = cursorObject.transform;
 					Vector3 p = CalculateCursorPosition();
 					t.localPosition = p;
 					t.rotation = console.transform.rotation;
-					cursor.SetActive(true);
+					cursorObject.SetActive(true);
 				} else {
-					cursor.SetActive(false);
+					cursorObject.SetActive(false);
 				}
 			}
 			internal void SetCursorPositionPoints(Vector3[] verts, int vertexIndex) {
@@ -62,9 +62,9 @@ namespace NonStandard.Cli {
 				cursorMeshPosition[3] = verts[vertexIndex + 3];
 			}
 			public void Init(UnityConsole console) {
-				if (cursor != null) {
-					Cli.UnityConsoleCursor ucc = cursor.GetComponent<Cli.UnityConsoleCursor>();
-					if (ucc == null) { ucc = cursor.AddComponent<Cli.UnityConsoleCursor>(); }
+				if (cursorObject != null) {
+					Cli.UnityConsoleCursor ucc = cursorObject.GetComponent<Cli.UnityConsoleCursor>();
+					if (ucc == null) { ucc = cursorObject.AddComponent<Cli.UnityConsoleCursor>(); }
 					ucc.Initialize(console.Text.fontSize);
 				}
 			}
@@ -127,7 +127,7 @@ namespace NonStandard.Cli {
 		public void AddToFontSize(float value) {
 			FontSize += value;
 			if (FontSize < 1) { FontSize = 1; }
-			if (cursorUi.cursor != null) { cursorUi.cursor.GetComponent<Cli.UnityConsoleCursor>().ScaleToFontSize(FontSize); }
+			if (cursorUi.cursorObject != null) { cursorUi.cursorObject.GetComponent<Cli.UnityConsoleCursor>().ScaleToFontSize(FontSize); }
 			RefreshText();
 		}
 
@@ -147,8 +147,8 @@ namespace NonStandard.Cli {
 		}
 
 		public int CursorSize {
-			get { return (int)(cursorUi.cursor.transform.localScale.MagnitudeManhattan() / 3); }
-			set { cursorUi.cursor.transform.localScale = Vector3.one * (value / 100f); }
+			get { return (int)(cursorUi.cursorObject.transform.localScale.MagnitudeManhattan() / 3); }
+			set { cursorUi.cursorObject.transform.localScale = Vector3.one * (value / 100f); }
 		}
 
 		private void Awake() {

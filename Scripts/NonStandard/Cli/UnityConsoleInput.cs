@@ -13,11 +13,18 @@ using UnityEngine.InputSystem.Layouts;
 namespace NonStandard.Cli {
 	[RequireComponent(typeof(UnityConsole)),RequireComponent(typeof(UserInput))]
 	public class UnityConsoleInput : MonoBehaviour {
+		public const string CmdLine = "CmdLine";
+		public const string CmdCtrl = "CmdLineCtrl";
+		public const string CmdAlt= "CmdLineAlt";
+		public const string CmdShift = "CmdLineShift";
 		private UnityConsole console;
 		/// <summary>
 		/// very short-term key storage, processed and added to the <see cref="UnityConsole.Console"/> each update
 		/// </summary>
 		protected StringBuilder _keyBuffer = new StringBuilder();
+		private static bool ctrlIsDown = false;
+		private static bool altIsDown = false;
+		private static bool shiftIsDown = false;
 
 		//protected List<ConsoleDiffUnit> _replaced = new List<ConsoleDiffUnit>();
 
@@ -122,20 +129,6 @@ namespace NonStandard.Cli {
 			[Keyboard.current.digit7Key] = new KMap('7', '&'),
 			[Keyboard.current.digit8Key] = new KMap('8', '*'),
 			[Keyboard.current.digit9Key] = new KMap('9', '('),
-			[Keyboard.current.minusKey] = new KMap('-', '_'),
-			[Keyboard.current.equalsKey] = new KMap('=', '+'),
-			[Keyboard.current.tabKey] = new KMap('\t','\t'),
-			[Keyboard.current.enterKey] = new KMap('\n', '\n'),
-			[Keyboard.current.leftBracketKey] = new KMap('[', '{'),
-			[Keyboard.current.rightBracketKey] = new KMap(']', '}'),
-			[Keyboard.current.backslashKey] = new KMap('\\', '|'),
-			[Keyboard.current.semicolonKey] = new KMap(';', ':'),
-			[Keyboard.current.quoteKey] = new KMap('\'', '\"'),
-			[Keyboard.current.commaKey] = new KMap(',', '<'),
-			[Keyboard.current.periodKey] = new KMap('.', '>'),
-			[Keyboard.current.slashKey] = new KMap('/', '?'),
-			[Keyboard.current.spaceKey] = new KMap(' ', ' '),
-			[Keyboard.current.backspaceKey] = new KMap('\b','\b'),
 			[Keyboard.current.aKey] = new KMap('a', 'A'),
 			[Keyboard.current.bKey] = new KMap('b', 'B'),
 			[Keyboard.current.cKey] = new KMap('c', 'C'),
@@ -162,6 +155,20 @@ namespace NonStandard.Cli {
 			[Keyboard.current.xKey] = new KMap('x', 'X'),
 			[Keyboard.current.yKey] = new KMap('y', 'Y'),
 			[Keyboard.current.zKey] = new KMap('z', 'Z'),
+			[Keyboard.current.minusKey] = new KMap('-', '_'),
+			[Keyboard.current.equalsKey] = new KMap('=', '+'),
+			[Keyboard.current.leftBracketKey] = new KMap('[', '{'),
+			[Keyboard.current.rightBracketKey] = new KMap(']', '}'),
+			[Keyboard.current.backslashKey] = new KMap('\\', '|'),
+			[Keyboard.current.semicolonKey] = new KMap(';', ':'),
+			[Keyboard.current.quoteKey] = new KMap('\'', '\"'),
+			[Keyboard.current.commaKey] = new KMap(',', '<'),
+			[Keyboard.current.periodKey] = new KMap('.', '>'),
+			[Keyboard.current.slashKey] = new KMap('/', '?'),
+			[Keyboard.current.spaceKey] = new KMap(' ', ' '),
+			[Keyboard.current.tabKey] = new KMap('\t','\t'),
+			[Keyboard.current.enterKey] = new KMap('\n', '\n'),
+			[Keyboard.current.backspaceKey] = new KMap('\b','\b'),
 		};
 
 		public enum KMapMod { None = 0, Shift = 1, Ctrl = 2 }
@@ -171,10 +178,7 @@ namespace NonStandard.Cli {
 			public KMapMod modifier;
 			public UnityEvent action;
 			public KeyEventMap(string key, KMapMod mod, EventBind eventBind) {
-				if (!key.StartsWith(KbPrefix)) {
-					key = KbPrefix + key;
-				}
-				this.key = key;
+				this.key = KMap.Path(key);
 				this.modifier = mod;
 				action = new UnityEvent();
 				//Debug.Log("binding "+eventBind+" to "+action);
@@ -188,7 +192,7 @@ namespace NonStandard.Cli {
 				}
 			}
 		}
-		public KeyEventMap[] specialKeys = null;
+		public List<KeyEventMap> specialKeys = null;
 		private KeyEventMap[] GetDefaultKeyEventMap() => new KeyEventMap[] {
 			new KeyEventMap("enter", KMapMod.None, new EventBind(this, nameof(FinishCurrentInput))),
 			new KeyEventMap("minus", KMapMod.Ctrl, new EventBind(this, nameof(DecreaseFontSize))),
@@ -209,21 +213,34 @@ namespace NonStandard.Cli {
 			public KMap wCtrl(object ctrl) { return new KMap(press, shift, ctrl); }
 			public void Absorb(KeyEventMap kep) {
 				switch (kep.modifier) {
-					case KMapMod.None: press = new Action(kep.action.Invoke); break;
-					case KMapMod.Shift:       shift = new Action(kep.action.Invoke); break;
-					case KMapMod.Ctrl:        ctrl = new Action(kep.action.Invoke); break;
+					case KMapMod.None:  press = new Action(kep.action.Invoke); break;
+					case KMapMod.Shift: shift = new Action(kep.action.Invoke); break;
+					case KMapMod.Ctrl:  ctrl = new Action(kep.action.Invoke); break;
 				}
 			}
+			public static string Path(string key) {
+				if (!key.StartsWith(KbPrefix)) { return KbPrefix + key; }
+				return key;
+			}
+			public static string[] Path(string[] keys) {
+				string[] p = new string[keys.Length];
+				for (int i = 0; i < keys.Length; ++i) {
+					p[i] = (!keys[i].StartsWith(KbPrefix)) ? KbPrefix + keys[i] : keys[i];
+				}
+				return p;
+			}
 		}
-		public static bool IsShiftDown() { return Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed; }
-		public static bool IsControlDown() { return Keyboard.current.leftCtrlKey.isPressed || Keyboard.current.rightCtrlKey.isPressed; }
-		public static bool IsAltDown() { return Keyboard.current.leftAltKey.isPressed || Keyboard.current.rightAltKey.isPressed; }
+		public static bool IsShiftDown() { return shiftIsDown; }
+		public static bool IsControlDown() { return ctrlIsDown; }
+		public static bool IsAltDown() { return altIsDown; }
 		private void MovCur(Coord dir) {
 			console.Console.Cursor += dir;
 			console.Console.RefreshCursorValid();
 		}
 		private void MovWin(Coord dir) { console.ScrollRenderWindow(dir); }
 
+		public void PasteFromClipboard(InputAction.CallbackContext c) => PasteFromClipboard();
+		public void CopyToClipboard(InputAction.CallbackContext c) => CopyToClipboard();
 		public void PasteFromClipboard() {
 			_pastedText = GUIUtility.systemCopyBuffer.Replace("\r","");
 			_keyBuffer.Append(_pastedText);
@@ -253,7 +270,7 @@ namespace NonStandard.Cli {
 			}
 			return finalString.ToString();
 		}
-
+		public void FinishCurrentInput(InputAction.CallbackContext c) => FinishCurrentInput();
 		public void FinishCurrentInput() {
 			string processedInput = ProcessInput(_keyBuffer.ToString());
 			ConsoleDiff temp = lastInput;
@@ -283,15 +300,91 @@ namespace NonStandard.Cli {
 			UserInput uinput = GetComponent<UserInput>();
 			string[] keyboardInputs = new string[defaultKeyboardKeys.Length];
 			for (int i = 0; i < defaultKeyboardKeys.Length; i += 1) {
-				keyboardInputs[i] = "<Keyboard>/" + defaultKeyboardKeys[i];
+				keyboardInputs[i] = KbPrefix + defaultKeyboardKeys[i];
 			}
-			specialKeys = GetDefaultKeyEventMap();
+			specialKeys = new List<KeyEventMap>(GetDefaultKeyEventMap());
 
 			uinput.AddBindingIfMissing(new InputControlBinding("read keyboard input into the command line", "CmdLine/KeyInput",
 				ControlType.Button, new EventBind(this, nameof(KeyInput)), keyboardInputs));
+
+			//new KeyEventMap("enter", KMapMod.None, new EventBind(this, nameof(FinishCurrentInput))),
+			//new KeyEventMap("upArrow", KMapMod.None, new EventBind(this, nameof(MoveCursorUp))),
+			//new KeyEventMap("leftArrow", KMapMod.None, new EventBind(this, nameof(MoveCursorLeft))),
+			//new KeyEventMap("downArrow", KMapMod.None, new EventBind(this, nameof(MoveCursorDown))),
+			//new KeyEventMap("rightArrow", KMapMod.None, new EventBind(this, nameof(MoveCursorRight))),
+			//new KeyEventMap("minus", KMapMod.Ctrl, new EventBind(this, nameof(DecreaseFontSize))),
+			//new KeyEventMap("equals", KMapMod.Ctrl, new EventBind(this, nameof(IncreaseFontSize))),
+			//new KeyEventMap("c", KMapMod.Ctrl, new EventBind(this, nameof(CopyToClipboard))),
+			//new KeyEventMap("v", KMapMod.Ctrl, new EventBind(this, nameof(PasteFromClipboard))),
+
+			uinput.AddBindingIfMissing(new InputControlBinding("command line submit input", CmdLine+"/SubmitInput",
+				ControlType.Button, new EventBind(this, nameof(FinishCurrentInput)), KMap.Path("enter")));
+			uinput.AddBindingIfMissing(new InputControlBinding("command line cursor move up", CmdLine+"/UpArrow",
+				ControlType.Button, new EventBind(this, nameof(MoveCursorUp)), KMap.Path("upArrow")));
+			uinput.AddBindingIfMissing(new InputControlBinding("command line cursor move left", CmdLine+"/LeftArrow",
+				ControlType.Button, new EventBind(this, nameof(MoveCursorLeft)), KMap.Path("leftArrow")));
+			uinput.AddBindingIfMissing(new InputControlBinding("command line cursor move down", CmdLine+"/DownArrow",
+				ControlType.Button, new EventBind(this, nameof(MoveCursorDown)), KMap.Path("downArrow")));
+			uinput.AddBindingIfMissing(new InputControlBinding("command line cursor move right", CmdLine+"/RightArrow",
+				ControlType.Button, new EventBind(this, nameof(MoveCursorRight)), KMap.Path("rightArrow")));
+
+			uinput.AddBindingIfMissing(new InputControlBinding("command line modifier ctrl", CmdLine + "/ModifierCtrl",
+				ControlType.Button, new EventBind(this, nameof(ModifierAltHandler)), KMap.Path(
+					new string[] { "ctrl", "leftCtrl", "rightCtrl" })));
+			uinput.AddBindingIfMissing(new InputControlBinding("command line modifier alt", CmdLine + "/ModifierAlt",
+				ControlType.Button, new EventBind(this, nameof(ModifierAltHandler)), KMap.Path(
+					new string[] { "alt", "leftAlt", "rightAlt" })));
+			uinput.AddBindingIfMissing(new InputControlBinding("command line modifier shift", CmdLine + "/ModifierShift",
+				ControlType.Button, new EventBind(this, nameof(ModifierShiftHandler)), KMap.Path(
+					new string[] { "shift", "leftShift", "rightShift" })));
+
+			uinput.AddBindingIfMissing(new InputControlBinding("command line special control decrease font", CmdLine+"Ctrl/DecreaseFont",
+				ControlType.Button, new EventBind(this, nameof(DecreaseFontSize)), KMap.Path("minus")));
+			uinput.AddBindingIfMissing(new InputControlBinding("command line special control increase font", CmdCtrl+"/IncreaseFont",
+				ControlType.Button, new EventBind(this, nameof(IncreaseFontSize)), KMap.Path("equals")));
+			uinput.AddBindingIfMissing(new InputControlBinding("command line special control copy", CmdCtrl+"/Copy",
+				ControlType.Button, new EventBind(this, nameof(CopyToClipboard)), KMap.Path("c")));
+			uinput.AddBindingIfMissing(new InputControlBinding("command line special control paste", CmdCtrl+"/Paste",
+				ControlType.Button, new EventBind(this, nameof(PasteFromClipboard)), KMap.Path("v")));
+
 			uinput.AddActionMapToBind("CmdLine");
 		}
 #endif
+		public void ModifierAltHandler(InputAction.CallbackContext ctx) {
+			SpecialModifierHandler(ctx, CmdCtrl, ref ctrlIsDown);
+		}
+		public void SpecialAltHandler(InputAction.CallbackContext ctx) {
+			SpecialModifierHandler(ctx, CmdAlt, ref altIsDown);
+		}
+		public void ModifierShiftHandler(InputAction.CallbackContext ctx) {
+			SpecialModifierHandler(ctx, CmdShift, ref shiftIsDown);
+		}
+		private void SpecialModifierHandler(InputAction.CallbackContext ctx, string mapName, ref bool state) {
+			UserInput uinput = GetComponent<UserInput>();
+			bool oldState = state;
+			switch (ctx.phase) {
+				case InputActionPhase.Performed: state = true; break;
+				case InputActionPhase.Canceled: state = false; break;
+			}
+			if (oldState != state) {
+				if (state) {
+					uinput.EnableActionMap(mapName);
+				} else {
+					uinput.DisableActionMap(mapName);
+				}
+				Debug.Log(mapName+" " + state + " via " + ctx.control.path + " " + ctx.phase);
+			}
+		}
+		public void IncreaseFontSize(InputAction.CallbackContext c) => IncreaseFontSize();
+		public void DecreaseFontSize(InputAction.CallbackContext c) => DecreaseFontSize();
+		public void MoveCursorUp(InputAction.CallbackContext c) => MoveCursorUp();
+		public void MoveCursorLeft(InputAction.CallbackContext c) => MoveCursorLeft();
+		public void MoveCursorDown(InputAction.CallbackContext c) => MoveCursorDown();
+		public void MoveCursorRight(InputAction.CallbackContext c) => MoveCursorRight();
+		public void ShiftWindowUp(InputAction.CallbackContext c) => ShiftWindowUp();
+		public void ShiftWindowLeft(InputAction.CallbackContext c) => ShiftWindowLeft();
+		public void ShiftWindowDown(InputAction.CallbackContext c) => ShiftWindowDown();
+		public void ShiftWindowRight(InputAction.CallbackContext c) => ShiftWindowRight();
 		public void IncreaseFontSize() { console.AddToFontSize(1); }
 		public void DecreaseFontSize() { console.AddToFontSize(-1); }
 		public void MoveCursorUp() { MovCur(Coord.Up); }
@@ -357,22 +450,28 @@ namespace NonStandard.Cli {
 			submittedInputColorCode = console.AddConsoleColorPalette(correctInput);
 			errorInputColorCode = console.AddConsoleColorPalette(invalidInput);
 			console.Write("testing");
-			Dictionary<KeyControl, KMap> keyMap = GetKeyMap();
-			for(int i = 0; i < specialKeys.Length; ++i) {
-				InputControl control = InputSystem.FindControl(specialKeys[i].key);
-				if (control == null) {
-					throw new Exception("could not find "+ specialKeys[i].key);
-				}
-				KeyControl kc = control as KeyControl;
-				if (kc == null) {
-					throw new Exception(specialKeys[i].key + " is not a " + nameof(KeyControl) + ", it's a " + control.GetType());
-				}
-				if(!keyMap.TryGetValue(kc, out KMap kmap)) {
-					kmap = new KMap(null);
-				}
-				kmap.Absorb(specialKeys[i]);
-				keyMap[kc] = kmap;
+			for(int i = 0; i < specialKeys.Count; ++i) {
+				AddKeyEventMap(specialKeys[i]);
 			}
+		}
+		public void AddKeyEventMap(KeyEventMap kem) {
+			InputControl control = InputSystem.FindControl(kem.key);
+			if (control == null) {
+				throw new Exception("could not find " + kem.key);
+			}
+			KeyControl kc = control as KeyControl;
+			if (kc == null) {
+				throw new Exception(kem.key + " is not a " + nameof(KeyControl) + ", it's a " + control.GetType());
+			}
+			Dictionary<KeyControl, KMap> keyMap = GetKeyMap();
+			if (!keyMap.TryGetValue(kc, out KMap kmap)) {
+				kmap = new KMap(null);
+			}
+			// set the default KMap to use null in this case.
+			kmap.Absorb(kem);
+			// add this KeyEvent to the appropriate input action map
+			keyMap[kc] = kmap;
+
 		}
 		public void WriteInputText(string inputText) {
 			if (activeInputColorCode > 0) { console.Console.PushForeColor((byte)activeInputColorCode); }

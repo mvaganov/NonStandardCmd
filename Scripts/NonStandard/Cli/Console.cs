@@ -31,11 +31,11 @@ namespace NonStandard.Cli {
 		}
 
 		public Coord Cursor {
-			get => cursor.position;
+			get => cursor.position2d;
 			set {
-				cursor.position = value;
+				cursor.position2d = value;
 				if (Window.followCursor == DisplayWindowSettings.FollowBehavior.Yes) {
-					Window.viewRect.MoveToContain(cursor.position);
+					Window.viewRect.MoveToContain(cursor.position2d);
 				}
 				textNeedsRefresh = true;
 			}
@@ -48,8 +48,8 @@ namespace NonStandard.Cli {
 		public byte BackColor { get => _output.currentDefaultTile.back; set => _output.currentDefaultTile.back = value; }
 		public int BufferHeight => _output.Size.Y;
 		public int BufferWidth => _output.Size.X;
-		public int CursorLeft { get => cursor.position.Col; set => cursor.position.Col = (value); }
-		public int CursorTop { get => cursor.position.Row; set => cursor.position.Row = (value); }
+		public int CursorLeft { get => cursor.position2d.Col; set => cursor.position2d.Col = (value); }
+		public int CursorTop { get => cursor.position2d.Row; set => cursor.position2d.Row = (value); }
 
 		public void PushForeColor(ConsoleColor c) { _colorStack.Add(ForeColor); ForegoundColor = c; }
 		public void PushForeColor(byte c) { _colorStack.Add(ForeColor); ForeColor = c; }
@@ -73,7 +73,7 @@ namespace NonStandard.Cli {
 		}
 		public void Write(string text) {
 			Coord oldSize = _output.Size;
-			_output.Write(text, ref cursor.position);
+			_output.Write(text, ref cursor.position2d);
 			if (_output.Size != oldSize) {
 				//Show.Log("window update");
 				Window.UpdatePosition();
@@ -85,7 +85,7 @@ namespace NonStandard.Cli {
 			if (input != null && input.Start == Coord.NegativeOne) {
 				input.Start = Cursor;
 			}
-			_output.Write(text, ref cursor.position, input, ref inputIndex);
+			_output.Write(text, ref cursor.position2d, input, ref inputIndex);
 			if (_output.Size != oldSize) {
 				//Show.Log("window update");
 				Window.UpdatePosition();
@@ -116,12 +116,12 @@ namespace NonStandard.Cli {
 		}
 		public void RestartInput() {
 			cursor.indexInInput = 0;
-			_input.Start = cursor.position;
+			_input.Start = cursor.position2d;
 		}
 
 		[System.Serializable] public class CursorState {
 			public bool validInputIndex;
-			public Coord position;
+			public Coord position2d;
 			public int indexInInput;
 			public int indexInConsole;
 		}
