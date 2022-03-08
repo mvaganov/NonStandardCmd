@@ -291,7 +291,7 @@ namespace NonStandard.Cli {
 				keyboardInputs[i] = KbPrefix + defaultKeyboardKeys[i];
 			}
 
-			uinput.AddBindingIfMissing(new InputControlBinding("read keyboard input into the command line", "CmdLine/KeyInput",
+			uinput.AddBindingIfMissing(new InputControlBinding("command line standard key input", "CmdLine/KeyInput",
 				ControlType.Button, new EventBind(this, nameof(KeyInput)), keyboardInputs));
 
 			uinput.AddBindingIfMissing(new InputControlBinding("command line submit input", CmdLine+"/SubmitInput",
@@ -305,23 +305,23 @@ namespace NonStandard.Cli {
 			uinput.AddBindingIfMissing(new InputControlBinding("command line cursor move right", CmdLine+"/RightArrow",
 				ControlType.Button, new EventBind(this, nameof(MoveCursorRight)), KMap.Path("rightArrow")));
 
-			uinput.AddBindingIfMissing(new InputControlBinding("command line modifier ctrl", CmdLine + "/ModifierCtrl",
+			uinput.AddBindingIfMissing(new InputControlBinding("command line ctrl", CmdLine + "/ModifierCtrl",
 				ControlType.Button, new EventBind(this, nameof(ModifierAltHandler)), KMap.Path(
 					new string[] { "ctrl", "leftCtrl", "rightCtrl" })));
-			uinput.AddBindingIfMissing(new InputControlBinding("command line modifier alt", CmdLine + "/ModifierAlt",
+			uinput.AddBindingIfMissing(new InputControlBinding("command line alt", CmdLine + "/ModifierAlt",
 				ControlType.Button, new EventBind(this, nameof(ModifierAltHandler)), KMap.Path(
 					new string[] { "alt", "leftAlt", "rightAlt" })));
-			uinput.AddBindingIfMissing(new InputControlBinding("command line modifier shift", CmdLine + "/ModifierShift",
+			uinput.AddBindingIfMissing(new InputControlBinding("command line shift", CmdLine + "/ModifierShift",
 				ControlType.Button, new EventBind(this, nameof(ModifierShiftHandler)), KMap.Path(
 					new string[] { "shift", "leftShift", "rightShift" })));
 
-			uinput.AddBindingIfMissing(new InputControlBinding("command line special control decrease font", CmdLine+"Ctrl/DecreaseFont",
+			uinput.AddBindingIfMissing(new InputControlBinding("command line ctrl decrease font", CmdCtrl+"/DecreaseFont",
 				ControlType.Button, new EventBind(this, nameof(DecreaseFontSize)), KMap.Path("minus")));
-			uinput.AddBindingIfMissing(new InputControlBinding("command line special control increase font", CmdCtrl+"/IncreaseFont",
+			uinput.AddBindingIfMissing(new InputControlBinding("command line ctrl increase font", CmdCtrl+"/IncreaseFont",
 				ControlType.Button, new EventBind(this, nameof(IncreaseFontSize)), KMap.Path("equals")));
-			uinput.AddBindingIfMissing(new InputControlBinding("command line special control copy", CmdCtrl+"/Copy",
+			uinput.AddBindingIfMissing(new InputControlBinding("command line ctrl copy", CmdCtrl+"/Copy",
 				ControlType.Button, new EventBind(this, nameof(CopyToClipboard)), KMap.Path("c")));
-			uinput.AddBindingIfMissing(new InputControlBinding("command line special control paste", CmdCtrl+"/Paste",
+			uinput.AddBindingIfMissing(new InputControlBinding("command line ctrl paste", CmdCtrl+"/Paste",
 				ControlType.Button, new EventBind(this, nameof(PasteFromClipboard)), KMap.Path("v")));
 
 			uinput.AddActionMapToBind("CmdLine");
@@ -377,6 +377,7 @@ namespace NonStandard.Cli {
 			sb.Append(str);
 			return str.Length;
 		}
+
 		private int ProcessKeyMappedTarget(object context, StringBuilder sb, bool alsoResolveNonText = true) {
 			//Debug.Log(context);
 			switch (context) {
@@ -387,6 +388,7 @@ namespace NonStandard.Cli {
 			}
 			return 0;
 		}
+
 		protected void KeyDown(KeyControl kc) {
 			if (!enabled) {
 				Debug.Log("ignoring "+kc.name+", ConsoleInput is disabled.");
@@ -405,10 +407,12 @@ namespace NonStandard.Cli {
 				}
 			}
 		}
+
 		protected void KeyUp(KeyControl kc) {
 			if (!enabled) { return; }
 			keysDown.Remove(kc);
 		}
+
 		public void KeyInput(InputAction.CallbackContext context) {
 			//if (!_keyInputNormalAvailable) return;
 			switch (context.phase) {
@@ -428,25 +432,7 @@ namespace NonStandard.Cli {
 			errorInputColorCode = console.AddConsoleColorPalette(invalidInput);
 			console.Write("testing");
 		}
-		public void AddKeyEventMap(KeyEventMap kem) {
-			InputControl control = InputSystem.FindControl(kem.key);
-			if (control == null) {
-				throw new Exception("could not find " + kem.key);
-			}
-			KeyControl kc = control as KeyControl;
-			if (kc == null) {
-				throw new Exception(kem.key + " is not a " + nameof(KeyControl) + ", it's a " + control.GetType());
-			}
-			Dictionary<KeyControl, KMap> keyMap = GetKeyMap();
-			if (!keyMap.TryGetValue(kc, out KMap kmap)) {
-				kmap = new KMap(null);
-			}
-			// set the default KMap to use null in this case.
-			kmap.Absorb(kem);
-			// add this KeyEvent to the appropriate input action map
-			keyMap[kc] = kmap;
 
-		}
 		public void WriteInputText(string inputText) {
 			if (activeInputColorCode > 0) { console.Console.PushForeColor((byte)activeInputColorCode); }
 			console.Console.WriteInput(inputText);
