@@ -73,6 +73,7 @@ namespace NonStandard.Cli {
 			//	}
 			//}
 			WriteNext(body, index, tilesRemainingInRow + 1);
+			++index;
 		}
 
 		public void InsertNewline(int index, ConsoleBody body) {

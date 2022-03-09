@@ -140,13 +140,19 @@ namespace NonStandard.Cli {
 				switch (c) {
 					case Col.ColorSequenceDelim: ProcessColorSequenceDelimiter(text, i); continue;
 					case '\b': diff.InsertBackspace(this, ref writeCursor, ref inputIndex); break;
-					case '\n': diff.Insert(ref inputIndex, currentDefaultTile.wLetter('\n'), this, ref writeCursor); break;
+					case '\n':
+						// write the newline into the input field
+						diff.Insert(ref inputIndex, currentDefaultTile.wLetter('\n'), this, ref writeCursor);
+						// show it in the command line? nah.
+						//printCharacter = true;
+						break;
 					default: printCharacter = true; break;
 				}
 				EnsureSufficientLines(writeCursor.row + 1);
 				if (printCharacter) {
 					AssertValidWriteCursor(writeCursor, text);
 					ConsoleTile consoleTile = currentDefaultTile.wLetter(c);
+					//UnityEngine.Debug.Log(c + " " + inputIndex);
 					PrintTile(consoleTile, diff, ref writeCursor, ref inputIndex);
 				}
 				if (writeCursor.col >= size.col) { size.col = (short)(writeCursor.col + 1); }
