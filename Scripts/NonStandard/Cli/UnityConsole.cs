@@ -7,6 +7,7 @@ using NonStandard.Extension;
 
 namespace NonStandard.Cli {
 	public class UnityConsole : MonoBehaviour {
+		public const int MaxColorPaletteSize = 0xff;
 		public TMP_InputField inputField;
 		public Console Console;
 		TMP_Text text;
@@ -105,10 +106,12 @@ namespace NonStandard.Cli {
 				}
 			}
 			public int AddConsoleColor(ColorRGBA colorRgba) {
-				if (ConsoleColorPalette.Count >= 0xff) {
+				if (ConsoleColorPalette.Count >= MaxColorPaletteSize) {
 					Show.Error("too many colors");
 					return -1;
 				}
+				int index = ConsoleColorPalette.IndexOf(colorRgba);
+				if (index >= 0) return index;
 				ConsoleColorPalette.Add(colorRgba);
 				return ConsoleColorPalette.Count - 1;
 			}
