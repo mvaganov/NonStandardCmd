@@ -17,35 +17,36 @@ namespace NonStandard.Cli {
 		#region Unity Lifecycle
 #if UNITY_EDITOR
 		protected override void Reset() {
-			_keyMapNameNormal = "console";
-			_keyMapNameCtrl = "consoleCtrl";
-			_keyMapNameAlt = "consoleAlt";
-			_keyMapNameShift = "consoleShift";
+			keyMapName.normal = "console";
+			keyMapName.ctrl = "consoleCtrl";
+			keyMapName.alt = "consoleAlt";
+			keyMapName.shift = "consoleShift";
 			base.Reset();
 			UnityConsole console = GetComponent<UnityConsole>();
 			BindDefaultKeyInput();
 			EventBind.IfNotAlready(OnTextSubmit, this, nameof(InputErrorCallback));
 		}
+
 		private void BindDefaultKeyInput() {
 			UserInput uinput = GetComponent<UserInput>();
 			// bind expected non-key-char console inputs
-			uinput.AddBindingIfMissing(new InputControlBinding("command line submit input", _keyMapNameNormal + "/SubmitInput",
+			uinput.AddBindingIfMissing(new InputControlBinding("console submit input", keyMapName.normal + "/SubmitInput",
 				ControlType.Button, new EventBind(this, nameof(FinishCurrentInput)), KeyboardInput.Path("enter")));
-			uinput.AddBindingIfMissing(new InputControlBinding("command line cursor move up", _keyMapNameNormal + "/UpArrow",
+			uinput.AddBindingIfMissing(new InputControlBinding("console cursor move up", keyMapName.normal + "/UpArrow",
 				ControlType.Button, new EventBind(this, nameof(MoveCursorUp)), KeyboardInput.Path("upArrow")));
-			uinput.AddBindingIfMissing(new InputControlBinding("command line cursor move left", _keyMapNameNormal + "/LeftArrow",
+			uinput.AddBindingIfMissing(new InputControlBinding("console cursor move left", keyMapName.normal + "/LeftArrow",
 				ControlType.Button, new EventBind(this, nameof(MoveCursorLeft)), KeyboardInput.Path("leftArrow")));
-			uinput.AddBindingIfMissing(new InputControlBinding("command line cursor move down", _keyMapNameNormal + "/DownArrow",
+			uinput.AddBindingIfMissing(new InputControlBinding("console cursor move down", keyMapName.normal + "/DownArrow",
 				ControlType.Button, new EventBind(this, nameof(MoveCursorDown)), KeyboardInput.Path("downArrow")));
-			uinput.AddBindingIfMissing(new InputControlBinding("command line cursor move right", _keyMapNameNormal + "/RightArrow",
+			uinput.AddBindingIfMissing(new InputControlBinding("console cursor move right", keyMapName.normal + "/RightArrow",
 				ControlType.Button, new EventBind(this, nameof(MoveCursorRight)), KeyboardInput.Path("rightArrow")));
-			uinput.AddBindingIfMissing(new InputControlBinding("command line ctrl decrease font", _keyMapNameCtrl + "/DecreaseFont",
+			uinput.AddBindingIfMissing(new InputControlBinding("console ctrl decrease font", keyMapName.ctrl + "/DecreaseFont",
 				ControlType.Button, new EventBind(this, nameof(DecreaseFontSize)), KeyboardInput.Path("minus")));
-			uinput.AddBindingIfMissing(new InputControlBinding("command line ctrl increase font", _keyMapNameCtrl + "/IncreaseFont",
+			uinput.AddBindingIfMissing(new InputControlBinding("console ctrl increase font", keyMapName.ctrl + "/IncreaseFont",
 				ControlType.Button, new EventBind(this, nameof(IncreaseFontSize)), KeyboardInput.Path("equals")));
-			uinput.AddBindingIfMissing(new InputControlBinding("command line ctrl copy", _keyMapNameCtrl + "/Copy",
+			uinput.AddBindingIfMissing(new InputControlBinding("console ctrl copy", keyMapName.ctrl + "/Copy",
 				ControlType.Button, new EventBind(this, nameof(CopyToClipboard)), KeyboardInput.Path("c")));
-			uinput.AddBindingIfMissing(new InputControlBinding("command line ctrl paste", _keyMapNameCtrl + "/Paste",
+			uinput.AddBindingIfMissing(new InputControlBinding("console ctrl paste", keyMapName.ctrl + "/Paste",
 				ControlType.Button, new EventBind(this, nameof(PasteFromClipboard)), KeyboardInput.Path("v")));
 		}
 #endif

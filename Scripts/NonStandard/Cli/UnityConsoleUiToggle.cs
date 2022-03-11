@@ -9,9 +9,10 @@ using UnityEngine.UI;
 
 namespace NonStandard.Cli {
 	[RequireComponent(typeof(UserInput))]
-	public class UnityConsoleUiToggle : MonoBehaviour { 
+	public class UnityConsoleUiToggle : MonoBehaviour {
+		public const string UiKeyMapName = "UI";
 		bool disabledRectMask2d = false;
-		[Tooltip("which state the console input is active in")]
+		[Tooltip("which state the console input is active in"), ContextMenuItem("Bind Controls", nameof(BindControls))]
 		public ConsoleUiState consoleInputActive = ConsoleUiState.ScreenSpace;
 		public enum ConsoleUiState { None, ScreenSpace, WorldSpace, Both }
 		[System.Serializable]
@@ -25,14 +26,21 @@ namespace NonStandard.Cli {
 		public Canvas _worldSpaceCanvas;
 #if UNITY_EDITOR
 		private void Reset() {
+			BindControls();
+			Canvas[] canvases = transform.GetComponentsInChildren<Canvas>();
+			_worldSpaceCanvas = System.Array.Find(canvases, c => c.renderMode == RenderMode.WorldSpace);
+			_screenSpaceCanvas = System.Array.Find(canvases, c => c.renderMode == RenderMode.ScreenSpaceOverlay);
+		}
+
+		private void BindControls() {
 			UserInput uinput = GetComponent<UserInput>();
-			uinput.AddBindingIfMissing(new InputControlBinding("pause the game and put the command line console in the forground", "UI/ShowCmdLine", ControlType.Button,
-				new EventBind(this, nameof(SetScreenSpaceCanvas)), "<Keyboard>/backquote"));
-			uinput.AddBindingIfMissing(new InputControlBinding("unpause the game and hide the command line console", "UI/HideCmdLine", ControlType.Button,
-				new EventBind(this, nameof(SetScreenSpaceCanvas)), "<Keyboard>/escape"));
-			uinput.AddActionMapToBind("UI");
-			//KeyBind(KCode.BackQuote, KModifier.None, "activate console", nameof(SetScreenSpaceCanvas), target: this);
-			//KeyBind(KCode.Escape, KModifier.None, "deactivate console", nameof(SetWorldSpaceCanvas), target: this);
+			uinput.AddBindingIfMissing(new InputControlBinding(
+				"console pause game and put console in foreground", UiKeyMapName + "/ShowCmdLine",
+				ControlType.Button, new EventBind(this, nameof(SetScreenSpaceCanvas)), "<Keyboard>/backquote"));
+			uinput.AddBindingIfMissing(new InputControlBinding(
+				"console unpause game and hide console in foreground", UiKeyMapName + "/HideCmdLine",
+				ControlType.Button, new EventBind(this, nameof(SetScreenSpaceCanvas)), "<Keyboard>/escape"));
+			uinput.AddActionMapToBind(UiKeyMapName);
 			EventBind.On(callbacks.WhenThisActivates, this, nameof(Pause));
 			EventBind.On(callbacks.WhenThisDeactivates, this, nameof(Unpause));
 		}
