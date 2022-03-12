@@ -24,7 +24,7 @@ namespace NonStandard.Cli {
 			base.Reset();
 			UnityConsole console = GetComponent<UnityConsole>();
 			BindDefaultKeyInput();
-			EventBind.IfNotAlready(OnTextSubmit, this, nameof(InputErrorCallback));
+			EventBind.IfNotAlready(callbacks.OnTextSubmit, this, nameof(InputErrorCallback));
 		}
 
 		private void BindDefaultKeyInput() {
@@ -66,10 +66,6 @@ namespace NonStandard.Cli {
 			WriteInputText(txt);
 			_console.Console.RefreshCursorValid();
 		}
-
-		private void OnDisable() {
-			//Debug.Log("disabled console input");
-		}
 		#endregion Unity Lifecycle
 
 		#region Input Processing
@@ -83,8 +79,13 @@ namespace NonStandard.Cli {
 		private ConsoleDiff _lastInput = new ConsoleDiff();
 		public ColorSemantics colors = new ColorSemantics();
 
-		public UnityEvent_string OnTextSubmit;
+		public Callbacks callbacks;
 		public string LastInputText => _lastInput.ToSimpleString();
+
+		[System.Serializable] public class Callbacks {
+			public bool enable = true;
+			public UnityEvent_string OnTextSubmit = new UnityEvent_string();
+		}
 
 		[Serializable] public class ColorSemantics {
 			public Color activeInput = new Color(0.25f, 0.75f, 1);
@@ -99,16 +100,6 @@ namespace NonStandard.Cli {
 				codeCorrectInput = console.AddConsoleColorPalette(correctInput);
 				codeInvalidInput = console.AddConsoleColorPalette(invalidInput);
 			}
-		}
-
-		public void RefreshLastInputGood() => RefreshLastInput(colors.codeCorrectInput);
-		public void RefreshLastInputError() => RefreshLastInput(colors.codeInvalidInput);
-		public void RefreshLastInput(int colorCode) {
-			List<ConsoleDiffUnit> characterDifferences = _lastInput.delta;
-			for (int i = 0; i < characterDifferences.Count; ++i) {
-				characterDifferences[i] = characterDifferences[i].WithDifferentColor((byte)colorCode);
-			}
-			_console.Console.RefreshInput(_lastInput);
 		}
 		#endregion Input Processing
 
@@ -129,6 +120,16 @@ namespace NonStandard.Cli {
 		#endregion Input Callbacks
 
 		#region Console Controls
+		public void RefreshLastInputGood() => RefreshLastInput(colors.codeCorrectInput);
+		public void RefreshLastInputError() => RefreshLastInput(colors.codeInvalidInput);
+		public void RefreshLastInput(int colorCode) {
+			List<ConsoleDiffUnit> characterDifferences = _lastInput.delta;
+			for (int i = 0; i < characterDifferences.Count; ++i) {
+				characterDifferences[i] = characterDifferences[i].WithDifferentColor((byte)colorCode);
+			}
+			_console.Console.RefreshInput(_lastInput);
+		}
+
 		private void MovCur(Coord dir) {
 			_console.Console.Cursor += dir;
 			_console.Console.RefreshCursorValid();
@@ -162,7 +163,12 @@ namespace NonStandard.Cli {
 			_console.RestartInput();
 			_console.Write("\n");
 			_console.Console.RestartInput();
-			OnTextSubmit.Invoke(LastInputText);
+			string input = LastInputText;
+			if (callbacks.enable) {
+				callbacks.OnTextSubmit.Invoke(input);
+			} else {
+				Debug.LogWarning("ignoring " + input);
+			}
 		}
 
 		public void InputErrorCallback(string input) {

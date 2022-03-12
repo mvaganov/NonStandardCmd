@@ -162,7 +162,7 @@ namespace NonStandard.Cli {
 
 		public TMP_Text Text => inputField != null ? inputField.textComponent : text;
 
-		public RectTransform GetUiTransform() {
+		public RectTransform FindUiTransform() {
 			if (inputField == null) { inputField = GetComponentInChildren<TMP_InputField>(); }
 			if (!inputField) {
 				text = GetComponentInChildren<TMP_Text>();
@@ -176,7 +176,7 @@ namespace NonStandard.Cli {
 		}
 
 		void Start() {
-			GetUiTransform();
+			FindUiTransform();
 			TMP_Text pTmp = Text;
 			GameObject backgroundObject = Instantiate(Text.gameObject);
 			UnityConsole extra = backgroundObject.GetComponent<UnityConsole>();
