@@ -1,17 +1,17 @@
+// code by michael vaganov, released to the public domain via the unlicense (https://unlicense.org/)
 using NonStandard.Data;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using UnityEngine;
 
 namespace NonStandard.Cli {
 	/// <summary>
 	/// responsible for arranging and inserting console input into console output
 	/// </summary>
-	[System.Serializable] public class Console {
+	[System.Serializable] public class ConsoleState {
 		internal bool textNeedsRefresh = false;
 		public CursorState cursor;
-		public DisplayWindowSettings Window = new DisplayWindowSettings();
+		public WindowState Window = new WindowState();
 		private ConsoleBody _output = new ConsoleBody();
 		private ConsoleDiff _input = new ConsoleDiff();
 		/// <summary>
@@ -22,9 +22,9 @@ namespace NonStandard.Cli {
 		public ConsoleDiff Input { get => _input; set => _input = value; }
 		public ConsoleBody Output => _output;
 
-		public Console() {
+		public ConsoleState() {
 			_output = new ConsoleBody();
-			Window = new DisplayWindowSettings();
+			Window = new WindowState();
 		}
 		public void Init() {
 			Window.body = _output;
@@ -34,7 +34,7 @@ namespace NonStandard.Cli {
 			get => cursor.position2d;
 			set {
 				cursor.position2d = value;
-				if (Window.followCursor == DisplayWindowSettings.FollowBehavior.Yes) {
+				if (Window.followCursor == WindowState.FollowBehavior.Yes) {
 					Window.viewRect.MoveToContain(cursor.position2d);
 				}
 				textNeedsRefresh = true;
@@ -67,10 +67,13 @@ namespace NonStandard.Cli {
 		}
 
 		public void Write(char c) { Write(c.ToString()); }
+
 		public void Write(object o) { Write(o.ToString()); }
+
 		public void WriteInput(string inputText) {
 			Write(inputText, _input, ref cursor.indexInInput);
 		}
+
 		public void Write(string text) {
 			Coord oldSize = _output.Size;
 			_output.Write(text, ref cursor.position2d);
@@ -80,6 +83,7 @@ namespace NonStandard.Cli {
 			}
 			textNeedsRefresh = true;
 		}
+
 		public void Write(string text, ConsoleDiff input, ref int inputIndex) {
 			Coord oldSize = _output.Size;
 			if (input != null && input.Start == Coord.NegativeOne) {
@@ -95,6 +99,7 @@ namespace NonStandard.Cli {
 		public void RefreshInputText() {
 			RefreshInput(_input);
 		}
+
 		public void RefreshInput(ConsoleDiff diff) {
 			for (int i = 0; i < diff.delta.Count; i++) {
 				ConsoleDiffUnit consoleDiffUnit = diff.delta[i];
@@ -126,8 +131,7 @@ namespace NonStandard.Cli {
 			public int indexInConsole;
 		}
 
-		[System.Serializable]
-		public class DisplayWindowSettings {
+		[System.Serializable] public class WindowState {
 			public enum WindowSizing { Unconstrained, UseStaticViewRectangle, AutoCalculateViewRectangle }
 			internal ConsoleBody body;
 			public static readonly CoordRect Maximum = new CoordRect(Coord.Zero, Coord.Max);

@@ -16,7 +16,7 @@ namespace NonStandard.Cli {
 		private Commander _commander; //= new Commander();
 		public Commander CommanderInstance => _commander != null ? _commander : globalCommander ? _commander = Commander.Instance : null;
 		public void DoCommand(string text) {
-			UnityConsole console = GetComponent<UnityConsole>();
+			UnityConsoleOutput console = GetComponent<UnityConsoleOutput>();
 			CommanderInstance.ParseCommand(new Commander.Instruction(text, this), console.Write, out Tokenizer t);
 			if (t?.errors?.Count > 0) {
 				console.Console.PushForeColor(ConsoleColor.Red);
@@ -42,7 +42,7 @@ namespace NonStandard.Cli {
 		}
 		public void Cmd_Help(Command.Exec e) { CommanderInstance.Cmd_Help_Handler(e); }
 		public void Cmd_Echo(Command.Exec e) {
-			UnityConsole console = GetComponent<UnityConsole>();
+			UnityConsoleOutput console = GetComponent<UnityConsoleOutput>();
 			StringBuilder sb = new StringBuilder();
 			for (int i = 1; i < e.tok.Tokens.Count; ++i) {
 				object result = e.tok.Tokens[i].Resolve(e.tok, e.src);
@@ -54,10 +54,10 @@ namespace NonStandard.Cli {
 		}
 		public void Cmd_Clear(Command.Exec e) {
 			UnityConsole console = GetComponent<UnityConsole>();
-			console.Output.Clear();
-			console.Console.Cursor = Coord.Zero;
-			console.Console.Window.viewRect.Position = Coord.Zero;
-			console.Console.Window.UpdatePosition();
+			console.State.Output.Clear();
+			console.State.Cursor = Coord.Zero;
+			console.State.Window.viewRect.Position = Coord.Zero;
+			console.State.Window.UpdatePosition();
 		}
 #if UNITY_EDITOR
 		public void Reset() {

@@ -3,8 +3,7 @@
 namespace NonStandard.Cli {
 	public class UnityConsoleOptions : MonoBehaviour {
 #if UNITY_EDITOR
-		[System.Serializable]
-		public class Options {
+		[System.Serializable] public class Options {
 			public bool StandardInput = true;
 			public bool DoCommands = true;
 			public bool ToggleMainUI = true;

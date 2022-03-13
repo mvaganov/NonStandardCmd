@@ -1,4 +1,5 @@
-﻿using Nonstandard.Inputs;
+﻿// code by michael vaganov, released to the public domain via the unlicense (https://unlicense.org/)
+using Nonstandard.Inputs;
 using NonStandard.Data;
 using NonStandard.Inputs;
 using System;
@@ -8,21 +9,23 @@ using UnityEngine.InputSystem;
 
 namespace NonStandard.Cli {
 	/// <summary>
-	/// Connects input to a <see cref="UnityConsole"/> using a <see cref="UserInput"/> handler and manages that input
+	/// Connects input to a <see cref="UnityConsoleOutput"/> using a <see cref="UserInput"/> handler and manages that input
 	/// </summary>
-	[RequireComponent(typeof(UnityConsole))]
+	[RequireComponent(typeof(UnityConsoleOutput))]
 	public class UnityConsoleInput : KeyboardInput {
+		private UnityConsoleOutput _cout;
 		private UnityConsole _console;
 
 		#region Unity Lifecycle
 #if UNITY_EDITOR
+		public void ResetInternal() => Reset();
 		protected override void Reset() {
-			keyMapName.normal = "console";
-			keyMapName.ctrl = "consoleCtrl";
-			keyMapName.alt = "consoleAlt";
-			keyMapName.shift = "consoleShift";
+			keyMapNames.normal = "console";
+			keyMapNames.ctrl = "consoleCtrl";
+			keyMapNames.alt = "consoleAlt";
+			keyMapNames.shift = "consoleShift";
 			base.Reset();
-			UnityConsole console = GetComponent<UnityConsole>();
+			UnityConsoleOutput console = GetComponent<UnityConsoleOutput>();
 			BindDefaultKeyInput();
 			EventBind.IfNotAlready(callbacks.OnTextSubmit, this, nameof(InputErrorCallback));
 		}
@@ -30,41 +33,42 @@ namespace NonStandard.Cli {
 		private void BindDefaultKeyInput() {
 			UserInput uinput = GetComponent<UserInput>();
 			// bind expected non-key-char console inputs
-			uinput.AddBindingIfMissing(new InputControlBinding("console submit input", keyMapName.normal + "/SubmitInput",
+			uinput.AddBindingIfMissing(new InputControlBinding("console submit input", keyMapNames.normal + "/SubmitInput",
 				ControlType.Button, new EventBind(this, nameof(FinishCurrentInput)), KeyboardInput.Path("enter")));
-			uinput.AddBindingIfMissing(new InputControlBinding("console cursor move up", keyMapName.normal + "/UpArrow",
+			uinput.AddBindingIfMissing(new InputControlBinding("console cursor move up", keyMapNames.normal + "/UpArrow",
 				ControlType.Button, new EventBind(this, nameof(MoveCursorUp)), KeyboardInput.Path("upArrow")));
-			uinput.AddBindingIfMissing(new InputControlBinding("console cursor move left", keyMapName.normal + "/LeftArrow",
+			uinput.AddBindingIfMissing(new InputControlBinding("console cursor move left", keyMapNames.normal + "/LeftArrow",
 				ControlType.Button, new EventBind(this, nameof(MoveCursorLeft)), KeyboardInput.Path("leftArrow")));
-			uinput.AddBindingIfMissing(new InputControlBinding("console cursor move down", keyMapName.normal + "/DownArrow",
+			uinput.AddBindingIfMissing(new InputControlBinding("console cursor move down", keyMapNames.normal + "/DownArrow",
 				ControlType.Button, new EventBind(this, nameof(MoveCursorDown)), KeyboardInput.Path("downArrow")));
-			uinput.AddBindingIfMissing(new InputControlBinding("console cursor move right", keyMapName.normal + "/RightArrow",
+			uinput.AddBindingIfMissing(new InputControlBinding("console cursor move right", keyMapNames.normal + "/RightArrow",
 				ControlType.Button, new EventBind(this, nameof(MoveCursorRight)), KeyboardInput.Path("rightArrow")));
-			uinput.AddBindingIfMissing(new InputControlBinding("console ctrl decrease font", keyMapName.ctrl + "/DecreaseFont",
+			uinput.AddBindingIfMissing(new InputControlBinding("console ctrl decrease font", keyMapNames.ctrl + "/DecreaseFont",
 				ControlType.Button, new EventBind(this, nameof(DecreaseFontSize)), KeyboardInput.Path("minus")));
-			uinput.AddBindingIfMissing(new InputControlBinding("console ctrl increase font", keyMapName.ctrl + "/IncreaseFont",
+			uinput.AddBindingIfMissing(new InputControlBinding("console ctrl increase font", keyMapNames.ctrl + "/IncreaseFont",
 				ControlType.Button, new EventBind(this, nameof(IncreaseFontSize)), KeyboardInput.Path("equals")));
-			uinput.AddBindingIfMissing(new InputControlBinding("console ctrl copy", keyMapName.ctrl + "/Copy",
+			uinput.AddBindingIfMissing(new InputControlBinding("console ctrl copy", keyMapNames.ctrl + "/Copy",
 				ControlType.Button, new EventBind(this, nameof(CopyToClipboard)), KeyboardInput.Path("c")));
-			uinput.AddBindingIfMissing(new InputControlBinding("console ctrl paste", keyMapName.ctrl + "/Paste",
+			uinput.AddBindingIfMissing(new InputControlBinding("console ctrl paste", keyMapNames.ctrl + "/Paste",
 				ControlType.Button, new EventBind(this, nameof(PasteFromClipboard)), KeyboardInput.Path("v")));
 		}
 #endif
 		protected override void Awake() {
 			base.Awake();
+			_cout = GetComponent<UnityConsoleOutput>();
 			_console = GetComponent<UnityConsole>();
 		}
 
 		private void Start() {
 			colors.ApplyColorsTo(_console);
-			_console.Write("testing");
+			_cout.Write("testing");
 		}
 
 		void Update() {
 			string txt = Flush();
 			if (string.IsNullOrEmpty(txt)) { return; }
 			WriteInputText(txt);
-			_console.Console.RefreshCursorValid();
+			_console.State.RefreshCursorValid();
 		}
 		#endregion Unity Lifecycle
 
@@ -127,26 +131,26 @@ namespace NonStandard.Cli {
 			for (int i = 0; i < characterDifferences.Count; ++i) {
 				characterDifferences[i] = characterDifferences[i].WithDifferentColor((byte)colorCode);
 			}
-			_console.Console.RefreshInput(_lastInput);
+			_console.State.RefreshInput(_lastInput);
 		}
 
 		private void MovCur(Coord dir) {
-			_console.Console.Cursor += dir;
-			_console.Console.RefreshCursorValid();
+			_console.State.Cursor += dir;
+			_console.State.RefreshCursorValid();
 		}
 
-		private void MovWin(Coord dir) { _console.ScrollRenderWindow(dir); }
+		private void MovWin(Coord dir) { _cout.ScrollRenderWindow(dir); }
 
 		public void PasteFromClipboard() {
 			_pastedText = GUIUtility.systemCopyBuffer.Replace("\r","");
-			_keyBuffer.Append(_pastedText);
+			KeyBuffer.Append(_pastedText);
 		}
 
 		public void CopyToClipboard() {
 			//Show.Log(GUIUtility.systemCopyBuffer.StringifySmall());
 		}
-		public void IncreaseFontSize() { _console.AddToFontSize(1); }
-		public void DecreaseFontSize() { _console.AddToFontSize(-1); }
+		public void IncreaseFontSize() { _cout.AddToFontSize(1); }
+		public void DecreaseFontSize() { _cout.AddToFontSize(-1); }
 		public void MoveCursorUp() { MovCur(Coord.Up); }
 		public void MoveCursorLeft() { MovCur(Coord.Left); }
 		public void MoveCursorDown() { MovCur(Coord.Down); }
@@ -161,8 +165,8 @@ namespace NonStandard.Cli {
 			_console.Input = temp;
 			_console.Input.Clear();
 			_console.RestartInput();
-			_console.Write("\n");
-			_console.Console.RestartInput();
+			_cout.Write("\n");
+			_console.State.RestartInput();
 			string input = LastInputText;
 			if (callbacks.enable) {
 				callbacks.OnTextSubmit.Invoke(input);
@@ -182,9 +186,9 @@ namespace NonStandard.Cli {
 		}
 
 		public void WriteInputText(string inputText) {
-			if (colors.codeActiveInput > 0) { _console.Console.PushForeColor((byte)colors.codeActiveInput); }
-			_console.Console.WriteInput(inputText);
-			if (colors.codeActiveInput > 0) { _console.Console.PopForeColor(); }
+			if (colors.codeActiveInput > 0) { _console.State.PushForeColor((byte)colors.codeActiveInput); }
+			_console.State.WriteInput(inputText);
+			if (colors.codeActiveInput > 0) { _console.State.PopForeColor(); }
 		}
 		#endregion Console Controls
 	}

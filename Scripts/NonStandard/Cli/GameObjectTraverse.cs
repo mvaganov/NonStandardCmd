@@ -84,13 +84,13 @@ namespace NonStandard.Cli {
 
 		public void Cmd_Dir(Command.Exec e) {
 			List<KeyValuePair<string, object>> list = Listing(workingTransform);
-			UnityConsole console = GetComponent<UnityConsole>();
+			UnityConsoleOutput console = GetComponent<UnityConsoleOutput>();
 			for (int i = 0; i < list.Count; ++i) {
 				console.WriteLine(list[i].Key);
 			}
 		}
 		public void Cmd_Pwd(Command.Exec e) {
-			UnityConsole console = GetComponent<UnityConsole>();
+			UnityConsoleOutput console = GetComponent<UnityConsoleOutput>();
 			string pwd = "/";
 			if (workingTransform != null) {
 				pwd += workingTransform.HierarchyPath();
