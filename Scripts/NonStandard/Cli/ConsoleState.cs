@@ -10,7 +10,7 @@ namespace NonStandard.Cli {
 	/// </summary>
 	[System.Serializable] public class ConsoleState {
 		internal bool textNeedsRefresh = false;
-		public CursorState cursor;
+		public CursorState Cursor = new CursorState();
 		public WindowState Window = new WindowState();
 		private ConsoleBody _output = new ConsoleBody();
 		private ConsoleDiff _input = new ConsoleDiff();
@@ -30,12 +30,12 @@ namespace NonStandard.Cli {
 			Window.body = _output;
 		}
 
-		public Coord Cursor {
-			get => cursor.position2d;
+		public Coord CursorPosition {
+			get => Cursor.position2d;
 			set {
-				cursor.position2d = value;
+				Cursor.position2d = value;
 				if (Window.followCursor == WindowState.FollowBehavior.Yes) {
-					Window.viewRect.MoveToContain(cursor.position2d);
+					Window.viewRect.MoveToContain(Cursor.position2d);
 				}
 				textNeedsRefresh = true;
 			}
@@ -48,8 +48,8 @@ namespace NonStandard.Cli {
 		public byte BackColor { get => _output.currentDefaultTile.back; set => _output.currentDefaultTile.back = value; }
 		public int BufferHeight => _output.Size.Y;
 		public int BufferWidth => _output.Size.X;
-		public int CursorLeft { get => cursor.position2d.Col; set => cursor.position2d.Col = (value); }
-		public int CursorTop { get => cursor.position2d.Row; set => cursor.position2d.Row = (value); }
+		public int CursorLeft { get => Cursor.position2d.Col; set => Cursor.position2d.Col = (value); }
+		public int CursorTop { get => Cursor.position2d.Row; set => Cursor.position2d.Row = (value); }
 
 		public void PushForeColor(ConsoleColor c) { _colorStack.Add(ForeColor); ForegoundColor = c; }
 		public void PushForeColor(byte c) { _colorStack.Add(ForeColor); ForeColor = c; }
@@ -71,12 +71,12 @@ namespace NonStandard.Cli {
 		public void Write(object o) { Write(o.ToString()); }
 
 		public void WriteInput(string inputText) {
-			Write(inputText, _input, ref cursor.indexInInput);
+			Write(inputText, _input, ref Cursor.indexInInput);
 		}
 
 		public void Write(string text) {
 			Coord oldSize = _output.Size;
-			_output.Write(text, ref cursor.position2d);
+			_output.Write(text, ref Cursor.position2d);
 			if (_output.Size != oldSize) {
 				//Show.Log("window update");
 				Window.UpdatePosition();
@@ -87,9 +87,9 @@ namespace NonStandard.Cli {
 		public void Write(string text, ConsoleDiff input, ref int inputIndex) {
 			Coord oldSize = _output.Size;
 			if (input != null && input.Start == Coord.NegativeOne) {
-				input.Start = Cursor;
+				input.Start = CursorPosition;
 			}
-			_output.Write(text, ref cursor.position2d, input, ref inputIndex);
+			_output.Write(text, ref Cursor.position2d, input, ref inputIndex);
 			if (_output.Size != oldSize) {
 				//Show.Log("window update");
 				Window.UpdatePosition();
@@ -111,17 +111,17 @@ namespace NonStandard.Cli {
 		public void WriteLine(string text) { Write(text + "\n"); }
 
 		public void RefreshCursorValid() {
-			if (Cursor.col < 0) {
-				Cursor = new Coord(0, Cursor.row);
+			if (CursorPosition.col < 0) {
+				CursorPosition = new Coord(0, CursorPosition.row);
 			}
-			if (Cursor.row < 0) {
-				Cursor = new Coord(Cursor.col, 0);
+			if (CursorPosition.row < 0) {
+				CursorPosition = new Coord(CursorPosition.col, 0);
 			}
-			cursor.validInputIndex = _input.TryGetIndexOf(Cursor, out cursor.indexInInput);
+			Cursor.validInputIndex = _input.TryGetIndexOf(CursorPosition, out Cursor.indexInInput);
 		}
 		public void RestartInput() {
-			cursor.indexInInput = 0;
-			_input.Start = cursor.position2d;
+			Cursor.indexInInput = 0;
+			_input.Start = Cursor.position2d;
 		}
 
 		[System.Serializable] public class CursorState {

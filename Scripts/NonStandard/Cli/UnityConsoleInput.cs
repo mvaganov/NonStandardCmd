@@ -135,11 +135,15 @@ namespace NonStandard.Cli {
 		}
 
 		private void MovCur(Coord dir) {
-			_console.State.Cursor += dir;
+			_console.State.CursorPosition += dir;
 			_console.State.RefreshCursorValid();
 		}
 
-		private void MovWin(Coord dir) { _cout.ScrollRenderWindow(dir); }
+		private void MovWin(Coord dir) {
+			_console.State.Window.ScrollRenderWindow(dir);
+			_console.State.textNeedsRefresh = true;
+		}
+
 
 		public void PasteFromClipboard() {
 			_pastedText = GUIUtility.systemCopyBuffer.Replace("\r","");

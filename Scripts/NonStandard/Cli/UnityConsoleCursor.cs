@@ -3,7 +3,18 @@ using UnityEngine;
 
 namespace NonStandard.Cli {
 	public class UnityConsoleCursor : MonoBehaviour {
+		public UnityConsole console;
 		float fontSizeRatio = 1;
+		private Vector3[] cursorMeshPosition = new Vector3[4];
+		[HideInInspector] public ConsoleState.CursorState state;
+
+		private void Reset() {
+			console = GetComponentInParent<UnityConsole>();
+		}
+		private void Awake() {
+			Initialize(console.cout.Text.fontSize);
+			state = console.State.Cursor;
+		}
 		public void Initialize(float initialFontSize) {
 			fontSizeRatio = transform.localScale.x / initialFontSize;
 		}
@@ -11,8 +22,6 @@ namespace NonStandard.Cli {
 			transform.localScale = Vector3.one * fontSize * fontSizeRatio;
 		}
 
-		private Vector3[] cursorMeshPosition = new Vector3[4];
-		[HideInInspector] public ConsoleState.CursorState state;
 		public Vector3 CalculateCursorPosition() {
 			return (cursorMeshPosition[0] + cursorMeshPosition[1] + cursorMeshPosition[2] + cursorMeshPosition[3]) / 4;
 		}

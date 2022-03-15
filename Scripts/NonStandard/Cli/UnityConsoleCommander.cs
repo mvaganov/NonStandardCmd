@@ -55,7 +55,7 @@ namespace NonStandard.Cli {
 		public void Cmd_Clear(Command.Exec e) {
 			UnityConsole console = GetComponent<UnityConsole>();
 			console.State.Output.Clear();
-			console.State.Cursor = Coord.Zero;
+			console.State.CursorPosition = Coord.Zero;
 			console.State.Window.viewRect.Position = Coord.Zero;
 			console.State.Window.UpdatePosition();
 		}

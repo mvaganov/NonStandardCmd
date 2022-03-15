@@ -10,25 +10,22 @@ namespace NonStandard.Cli {
 	/// a facade class that organizes the rest of the console classes
 	/// </summary>
 	public class UnityConsole : MonoBehaviour {
-		private UnityConsoleOutput cout;
-		public ConsoleState State;
-		public ConsoleDiff Input { get => State.Input; set => State.Input = value; }
-		public Cli.UnityConsoleCursor cursorUI;
 		public const int MaxColorPaletteSize = 0xff;
+		private UnityConsoleOutput _cout;
+		public ConsoleState State;
 		public ColorSettings colorSettings = new ColorSettings();
+		public UnityConsoleCursor cursorUI;
 
+		public UnityConsoleOutput cout => _cout ? _cout : _cout = GetComponent<UnityConsoleOutput>();
+		public ConsoleDiff Input { get => State.Input; set => State.Input = value; }
 		public bool CursorVisible {
 			get => cursorUI.gameObject.activeSelf;
 			set => cursorUI.gameObject.SetActive(value);
 		}
-		public int CursorSize {
-			get { return (int)(cursorUI.transform.localScale.MagnitudeManhattan() / 3); }
-			set { cursorUI.transform.localScale = Vector3.one * (value / 100f); }
-		}
-
-		public void Init() {
-			cursorUI.Initialize(cout.Text.fontSize);
-		}
+		//public int CursorSize {
+		//	get { return (int)(cursorUI.transform.localScale.MagnitudeManhattan() / 3); }
+		//	set { cursorUI.transform.localScale = Vector3.one * (value / 100f); }
+		//}
 
 		public void RefreshCursorPosition() => cursorUI.RefreshCursorPosition(this);
 
@@ -50,7 +47,6 @@ namespace NonStandard.Cli {
 
 		private void Awake() {
 			colorSettings.FillInDefaultPalette();
-			cout = GetComponent<UnityConsoleOutput>();
 		}
 
 		void Start() {

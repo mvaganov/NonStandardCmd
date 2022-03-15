@@ -14,12 +14,50 @@ namespace NonStandard.Cli {
 		#region Unity Lifecycle
 		private void Awake() {
 			unityConsole = GetComponent<UnityConsole>();
-			unityConsole.cursorUI.state = Console.cursor;
-			//unityConsole.cursorUi.state = Console.cursor;
+			unityConsole.cursorUI.state = Console.Cursor;
 			Console.Init();
 		}
+
 		void Start() {
 			FindUiTransform();
+			CreateBackgroundTextArea();
+		}
+
+		public void Update() {
+			if (Console.textNeedsRefresh) {
+				unityConsole.RefreshCursorPosition();
+				RefreshText();
+			}
+		}
+		#endregion Unity Lifecycle
+
+		#region API
+		public void Write(char c) => Console.Write(c);
+		public void Write(object o) => Console.Write(o);
+		public void Write(string text) => Console.Write(text);
+		public void WriteLine(string text) => Console.Write(text + "\n");
+
+		public Vector2 TextAreaSize() {
+			return (inputField != null ? inputField.textViewport : _foreText.GetComponent<RectTransform>()).rect.size;
+		}
+		public float FontSize {
+			get => inputField != null ? inputField.pointSize : Text.fontSize;
+			set {
+				if (inputField != null) {
+					inputField.pointSize = _backText.fontSize = value;
+				} else {
+					Text.fontSize = _backText.fontSize = value;
+				}
+			}
+		}
+		#endregion API
+
+		#region User Interface
+		public TMP_InputField inputField;
+
+		public TMP_Text Text => inputField != null ? inputField.textComponent : _foreText;
+
+		private void CreateBackgroundTextArea() {
 			TMP_Text pTmp = Text;
 			GameObject backgroundObject = Instantiate(Text.gameObject);
 			UnityConsoleOutput extra = backgroundObject.GetComponent<UnityConsoleOutput>();
@@ -42,9 +80,8 @@ namespace NonStandard.Cli {
 			brt.anchorMax = rt.anchorMax;
 			brt.offsetMin = rt.offsetMin;
 			brt.offsetMax = rt.offsetMax;
-			//unityConsole.cursorUi.Init(this);
-			unityConsole.Init();
 		}
+
 		public RectTransform FindUiTransform() {
 			if (inputField == null) { inputField = GetComponentInChildren<TMP_InputField>(); }
 			if (!inputField) {
@@ -57,44 +94,12 @@ namespace NonStandard.Cli {
 			if (inputField != null) { return inputField.GetComponent<RectTransform>(); }
 			return _foreText.GetComponent<RectTransform>();
 		}
-		public void Update() {
-			if (Console.textNeedsRefresh) {
-				unityConsole.RefreshCursorPosition();
-				RefreshText();
-			}
-		}
-		#endregion Unity Lifecycle
+		#endregion User Interface
 
-		#region system/input/output
+		#region calculations
 		internal Vector2 sizeCalculated = -Vector2.one;
-		internal float fontSizeCalculated = -1; 
-		public TMP_InputField inputField;
+		internal float fontSizeCalculated = -1;
 
-		public TMP_Text Text => inputField != null ? inputField.textComponent : _foreText;
-		public float FontSize {
-			get => inputField != null ? inputField.pointSize : Text.fontSize;
-			set {
-				if (inputField != null) {
-					inputField.pointSize = _backText.fontSize = value;
-				} else {
-					Text.fontSize = _backText.fontSize = value;
-				}
-			}
-		}
-
-		public void Write(char c) => Console.Write(c);
-		public void Write(object o) => Console.Write(o);
-		public void Write(string text) => Console.Write(text);
-		public void WriteLine(string text) => Console.Write(text + "\n");
-
-		public Vector2 TextAreaSize() {
-			return (inputField != null ? inputField.textViewport : _foreText.GetComponent<RectTransform>()).rect.size;
-		}
-
-		public void ScrollRenderWindow(Coord direction) {
-			Console.Window.ScrollRenderWindow(direction);
-			Console.textNeedsRefresh = true;
-		}
 		public void AddToFontSize(float value) {
 			FontSize += value;
 			if (FontSize < 1) { FontSize = 1; }
@@ -106,9 +111,7 @@ namespace NonStandard.Cli {
 			}
 			RefreshText();
 		}
-		#endregion system/input/output
 
-		#region calculations
 		public void RefreshText() {
 			CoordRect limit = Console.Window.Limit;
 			ConsoleBody OutputData = unityConsole.State.Output;
@@ -133,10 +136,10 @@ namespace NonStandard.Cli {
 		void CalculateText(ConsoleBody body, CoordRect window, List<Tile> out_tile, bool foreground, float alpha) {
 			out_tile.Clear();
 			ConsoleTile current = body.defaultColors;
-			Coord limit = new Coord(window.Max.col, Math.Min(window.Max.row, Math.Max(body.lines.Count, Console.Cursor.row + 1)));
+			Coord limit = new Coord(window.Max.col, Math.Min(window.Max.row, Math.Max(body.lines.Count, Console.CursorPosition.row + 1)));
 			int rowsPrinted = 0;
 			//Coord cursor = body.Cursor;
-			Console.cursor.indexInConsole = -1;
+			Console.Cursor.indexInConsole = -1;
 			for (int row = window.Min.row; row < limit.row; ++row, ++rowsPrinted) {
 				if (rowsPrinted > 0) {
 					ColorRGBA colorRgba = unityConsole.GetConsoleColor(foreground ? current.fore : current.back, foreground);
@@ -155,8 +158,8 @@ namespace NonStandard.Cli {
 						} else if (line.Count > 0) {
 							current.Letter = foreground ? defaultEmptyCharacter.Foreground : defaultEmptyCharacter.Background;
 						}
-						if (!foreground && Console.Cursor.col == col && Console.Cursor.row == row) {
-							Console.cursor.indexInConsole = out_tile.Count;
+						if (!foreground && Console.CursorPosition.col == col && Console.CursorPosition.row == row) {
+							Console.Cursor.indexInConsole = out_tile.Count;
 						}
 						ColorRGBA colorRgba = unityConsole.GetConsoleColor(foreground ? current.fore : current.back, foreground);
 						colorRgba.a = (byte)(colorRgba.a * alpha);
@@ -164,14 +167,14 @@ namespace NonStandard.Cli {
 					}
 				}
 				// make sure the cursor has a character underneath it
-				if (Console.Cursor.row == row && Console.Cursor.col >= limit.col && window.Contains(Console.Cursor)) {
+				if (Console.CursorPosition.row == row && Console.CursorPosition.col >= limit.col && window.Contains(Console.CursorPosition)) {
 					int col = limit.col;
 					ColorRGBA colorRgba = unityConsole.GetConsoleColor(foreground ? current.fore : current.back, foreground);
 					colorRgba.a = (byte)(colorRgba.a * alpha);
-					while (col <= Console.Cursor.col) {
+					while (col <= Console.CursorPosition.col) {
 						current.Letter = foreground ? defaultEmptyCharacter.Foreground : defaultEmptyCharacter.Background;
-						if (!foreground && Console.Cursor.col == col && Console.Cursor.row == row) {
-							Console.cursor.indexInConsole = out_tile.Count;
+						if (!foreground && Console.CursorPosition.col == col && Console.CursorPosition.row == row) {
+							Console.Cursor.indexInConsole = out_tile.Count;
 						}
 						out_tile.Add(new Tile(current.Letter, colorRgba, 0));
 						++col;
@@ -234,7 +237,7 @@ namespace NonStandard.Cli {
 					//else sb.Append("(" + ((int)cinfo.character) + ")");
 					if (!cinfo.isVisible) continue;
 					int vertexIndex = cinfo.vertexIndex;
-					if (i == Console.cursor.indexInConsole) {
+					if (i == Console.Cursor.indexInConsole) {
 						if (vertexIndex >= verts.Length) {
 							Debug.LogWarning("weirdness happening. " + tmpText.text);
 						} else {
