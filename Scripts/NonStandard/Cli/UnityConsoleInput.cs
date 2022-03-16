@@ -4,6 +4,9 @@ using NonStandard.Data;
 using NonStandard.Inputs;
 using System;
 using System.Collections.Generic;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -28,6 +31,7 @@ namespace NonStandard.Cli {
 			UnityConsoleOutput console = GetComponent<UnityConsoleOutput>();
 			BindDefaultKeyInput();
 			EventBind.IfNotAlready(callbacks.OnTextSubmit, this, nameof(InputErrorCallback));
+			EditorUtility.SetDirty(this);
 		}
 
 		private void BindDefaultKeyInput() {

@@ -1,6 +1,9 @@
 ﻿// code by michael vaganov, released to the public domain via the unlicense (https://unlicense.org/)
 using NonStandard.Inputs;
 using System.Collections;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.InputSystem;
@@ -46,12 +49,14 @@ namespace NonStandard.Cli {
 			uinput.AddDefaultActionMapToBind(UiKeyMapName);
 			EventBind.IfNotAlready(callbacks.WhenThisActivates, this, nameof(Pause));
 			EventBind.IfNotAlready(callbacks.WhenThisDeactivates, this, nameof(Unpause));
+			EditorUtility.SetDirty(this);
 		}
 
 		private void FindCanvases() {
 			Canvas[] canvases = transform.GetComponentsInChildren<Canvas>();
 			_worldSpaceCanvas = System.Array.Find(canvases, c => c.renderMode == RenderMode.WorldSpace);
 			_screenSpaceCanvas = System.Array.Find(canvases, c => c.renderMode == RenderMode.ScreenSpaceOverlay);
+			EditorUtility.SetDirty(this);
 		}
 #endif
 		private void Awake() {
