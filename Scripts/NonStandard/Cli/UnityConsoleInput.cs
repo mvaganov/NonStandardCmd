@@ -16,6 +16,10 @@ namespace NonStandard.Cli {
 	/// </summary>
 	[RequireComponent(typeof(UnityConsoleOutput))]
 	public class UnityConsoleInput : KeyboardInput {
+		const string DefaultKeyMapNormal = "console";
+		const string DefaultKeyMapShift = "consoleShift";
+		const string DefaultKeyMapCtrl = "consoleCtrl";
+		const string DefaultKeyMapAlt = "consoleAlt";
 		private UnityConsoleOutput _cout;
 		private UnityConsole _console;
 
@@ -23,10 +27,10 @@ namespace NonStandard.Cli {
 #if UNITY_EDITOR
 		public void ResetInternal() => Reset();
 		protected override void Reset() {
-			keyMapNames.normal = "console";
-			keyMapNames.ctrl = "consoleCtrl";
-			keyMapNames.alt = "consoleAlt";
-			keyMapNames.shift = "consoleShift";
+			keyMapNames.normal = DefaultKeyMapNormal;
+			keyMapNames.shift = DefaultKeyMapShift;
+			keyMapNames.ctrl = DefaultKeyMapCtrl;
+			keyMapNames.alt = DefaultKeyMapAlt;
 			base.Reset();
 			UnityConsoleOutput console = GetComponent<UnityConsoleOutput>();
 			BindDefaultKeyInput();
@@ -86,8 +90,8 @@ namespace NonStandard.Cli {
 		/// </summary>
 		private ConsoleDiff _lastInput = new ConsoleDiff();
 		public ColorSemantics colors = new ColorSemantics();
-
 		public Callbacks callbacks;
+
 		public string LastInputText => _lastInput.ToSimpleString();
 
 		[System.Serializable] public class Callbacks {
@@ -148,7 +152,6 @@ namespace NonStandard.Cli {
 			_console.State.textNeedsRefresh = true;
 		}
 
-
 		public void PasteFromClipboard() {
 			_pastedText = GUIUtility.systemCopyBuffer.Replace("\r","");
 			KeyBuffer.Append(_pastedText);
@@ -172,14 +175,14 @@ namespace NonStandard.Cli {
 			_lastInput = _console.Input;
 			_console.Input = temp;
 			_console.Input.Clear();
-			_console.RestartInput();
 			_cout.Write("\n");
-			_console.State.RestartInput();
+			_console.RestartInput();
 			string input = LastInputText;
+			Debug.Log("[" + input + "]");
 			if (callbacks.enable) {
 				callbacks.OnTextSubmit.Invoke(input);
 			} else {
-				Debug.LogWarning("ignoring " + input);
+				Debug.LogWarning("ignoring [" + input + "]");
 			}
 		}
 
