@@ -6,13 +6,13 @@ using System.Text;
 namespace NonStandard.Cli {
 	[Serializable]
 	public class ConsoleDiff {
-		public List<ConsoleDiffUnit> delta = new List<ConsoleDiffUnit>();
+		public List<ConsoleDiffUnit> changes = new List<ConsoleDiffUnit>();
 		public CoordRect inputArea = CoordRect.Invalid;
 
-		public Coord Start = Coord.NegativeOne;
+		public Coord StartPosition = Coord.NegativeOne;
 		public bool IsAtOrBeforeStartingPoint(Coord writeCursor) {
-			return writeCursor.row < Start.row ||
-				writeCursor.row == Start.row && writeCursor.col <= Start.col;
+			return writeCursor.row < StartPosition.row ||
+				writeCursor.row == StartPosition.row && writeCursor.col <= StartPosition.col;
 		}
 
 		/// <summary>
@@ -45,15 +45,15 @@ namespace NonStandard.Cli {
 				//UnityEngine.Debug.LogWarning((int)overwritten.Letter+" {"+overwritten.Letter+ "} " + coordOfIndex + " : " + body.ToString()); // TODO why is it finding a space where it should find letters?
 			}
 			//UnityEngine.Debug.Log("inserting " + tile + " over '" + overwritten + "' @" + coordOfIndex + ":" + index + "/" + delta.Count+ " between ["+currentString.Substring(0, index)+ "] and ("+currentString.Substring(index)+")");
-			delta.Insert(index, new ConsoleDiffUnit(coordOfIndex, tile, overwritten));
+			changes.Insert(index, new ConsoleDiffUnit(coordOfIndex, tile, overwritten));
 			//for (int i = indexAtEndOfLine; i > index; --i) {
 			//	input[i].OffsetCoord(Coord.Right);
 			//}
 			// push forward the other letters
-			for (int i = index+1; i < delta.Count && delta[i].coord.Row == coordOfIndex.Row; ++i) {
-				Coord testCoord = delta[i].coord;
-				delta[i] = delta[i].WithOffsetCoord(Coord.Right);
-				if (testCoord == delta[i].coord) {
+			for (int i = index+1; i < changes.Count && changes[i].coord.Row == coordOfIndex.Row; ++i) {
+				Coord testCoord = changes[i].coord;
+				changes[i] = changes[i].WithOffsetCoord(Coord.Right);
+				if (testCoord == changes[i].coord) {
 					throw new Exception("bruh, not working.");
 				}
 			}
@@ -77,73 +77,73 @@ namespace NonStandard.Cli {
 		}
 
 		public void InsertNewline(int index, ConsoleBody body) {
-			WritePrev(body, index, delta.Count - index);
+			WritePrev(body, index, changes.Count - index);
 			Coord insertionPoint = GetCoord(index);
-			delta.Insert(index, new ConsoleDiffUnit(insertionPoint, ConsoleTile.DefaultTile.CloneWithLetter('\n'), body.GetAt(insertionPoint)));
+			changes.Insert(index, new ConsoleDiffUnit(insertionPoint, ConsoleTile.DefaultTile.CloneWithLetter('\n'), body.GetAt(insertionPoint)));
 			int nextLineStartOffset = 0;
 			Coord offset;
 			if (insertionPoint.col != 0) {
-				offset = new Coord(-delta[index + 1].coord.col, 1);
-				for (int i = index + 1; i < delta.Count; ++i) {
-					delta[i] = delta[i].WithOffsetCoord(offset);
+				offset = new Coord(-changes[index + 1].coord.col, 1);
+				for (int i = index + 1; i < changes.Count; ++i) {
+					changes[i] = changes[i].WithOffsetCoord(offset);
 					++nextLineStartOffset;
-					if (delta[i].next == '\n') {
+					if (changes[i].next == '\n') {
 						break;
 					}
 				}
 			}
 			offset = new Coord(0, 1);
-			for (int i = index + 1 + nextLineStartOffset; i < delta.Count; ++i) {
-				delta[i] = delta[i].WithOffsetCoord(offset);
+			for (int i = index + 1 + nextLineStartOffset; i < changes.Count; ++i) {
+				changes[i] = changes[i].WithOffsetCoord(offset);
 			}
-			WriteNext(body, index, delta.Count - index);
+			WriteNext(body, index, changes.Count - index);
 		}
 
 		public void RemoveNewline(int index, ConsoleBody body) {
-			WritePrev(body, index, delta.Count - index);
+			WritePrev(body, index, changes.Count - index);
 			Coord insertionPoint = GetCoord(index);
-			delta.RemoveAt(index);
+			changes.RemoveAt(index);
 			int nextLineStartOffset = 0;
 			Coord offset;
 			if (insertionPoint.col != 0) {
-				offset = new Coord(delta[index].coord.col, -1);
-				for (int i = index + 1; i < delta.Count; ++i) {
-					delta[i] = delta[i].WithOffsetCoord(offset);
+				offset = new Coord(changes[index].coord.col, -1);
+				for (int i = index + 1; i < changes.Count; ++i) {
+					changes[i] = changes[i].WithOffsetCoord(offset);
 					++nextLineStartOffset;
-					if (delta[i].next == '\n') {
+					if (changes[i].next == '\n') {
 						break;
 					}
 				}
 			}
 			offset = new Coord(0, -1);
-			for (int i = index + 1 + nextLineStartOffset; i < delta.Count; ++i) {
-				delta[i] = delta[i].WithOffsetCoord(offset);
+			for (int i = index + 1 + nextLineStartOffset; i < changes.Count; ++i) {
+				changes[i] = changes[i].WithOffsetCoord(offset);
 			}
-			WriteNext(body, index, delta.Count - index);
+			WriteNext(body, index, changes.Count - index);
 		}
 
 		public bool TryGetIndexOf(Coord c, out int index) {
-			if (c == Start && delta.Count == 0) {
+			if (c == StartPosition && changes.Count == 0) {
 				index = 0;
 				return true;
 			}
-			if (c.row < Start.row) {
+			if (c.row < StartPosition.row) {
 				index = 0;
 				return false;
 			}
 			Coord limit = FinalIndexCoord();
-			if (c == limit) { index = delta.Count; return true; }
+			if (c == limit) { index = changes.Count; return true; }
 			if (c.row > limit.row || c.row == limit.row && c.col > limit.col) {
-				index = delta.Count;
+				index = changes.Count;
 				return false;
 			}
-			Coord start = delta.Count > 0 ? delta[0].coord : Start;
+			Coord start = changes.Count > 0 ? changes[0].coord : StartPosition;
 			if (c.row < start.row || (c.row == start.row && c.col < start.Col)) {
 				index = 0;
 				return false;
 			}
-			for (index = 0; index < delta.Count; ++index) {
-				Coord coord = delta[index].coord;
+			for (index = 0; index < changes.Count; ++index) {
+				Coord coord = changes[index].coord;
 				if (coord == c) {
 					return true;
 				}
@@ -152,7 +152,7 @@ namespace NonStandard.Cli {
 					return false;
 				}
 			}
-			index = delta.Count;
+			index = changes.Count;
 			return true;
 			//throw new Exception("should return before this point");
 		}
@@ -169,13 +169,13 @@ namespace NonStandard.Cli {
 		}
 
 		public Coord FinalIndexCoord() {
-			if (delta.Count == 0) {
+			if (changes.Count == 0) {
 				//UnityEngine.Debug.Log("final index is start");
-				return Start;
+				return StartPosition;
 			}
-			Coord lastOne = delta[delta.Count - 1].coord;
+			Coord lastOne = changes[changes.Count - 1].coord;
 			Coord limit = lastOne + Coord.Right;
-			if (delta[delta.Count - 1].next.Letter == '\n' || (inputArea.IsValid && limit.X >= inputArea.Max.X)) {
+			if (changes[changes.Count - 1].next.Letter == '\n' || (inputArea.IsValid && limit.X >= inputArea.Max.X)) {
 				++limit.Row;
 				limit.Col = inputArea.IsValid ? inputArea.Min.Col : 0;
 				//UnityEngine.Debug.Log("final index crosses row boundary!");
@@ -185,7 +185,7 @@ namespace NonStandard.Cli {
 		}
 
 		public void RemoveAt(int index, ConsoleBody body) {
-			ConsoleTile tile = delta[index].next;
+			ConsoleTile tile = changes[index].next;
 			if (tile.Letter == '\n') {
 				RemoveNewline(index, body);
 				return;
@@ -194,18 +194,18 @@ namespace NonStandard.Cli {
 			int tilesToShift = tilesRemainingInRow - 1;
 			int indexAtEndOfLine = index + tilesToShift;
 			for (int i = index; i < indexAtEndOfLine; ++i) {
-				delta[i] = delta[i].WithDifferentTile(delta[i + 1].next);
+				changes[i] = changes[i].WithDifferentTile(changes[i + 1].next);
 			}
-			body.SetAt(delta[indexAtEndOfLine].coord, delta[indexAtEndOfLine].prev);
-			delta.RemoveAt(indexAtEndOfLine);
+			body.SetAt(changes[indexAtEndOfLine].coord, changes[indexAtEndOfLine].prev);
+			changes.RemoveAt(indexAtEndOfLine);
 			WriteNext(body, index, tilesToShift);
 		}
 
 		private int CountCharsInRow(int index) {
 			int tilesRemainingInRow = 0;
-			if (index < delta.Count) {
-				int row = delta[index].coord.Row;
-				for (int i = index; i < delta.Count && delta[i].coord.Row == row; ++i) {
+			if (index < changes.Count) {
+				int row = changes[index].coord.Row;
+				for (int i = index; i < changes.Count && changes[i].coord.Row == row; ++i) {
 					++tilesRemainingInRow;
 				}
 			}
@@ -217,43 +217,43 @@ namespace NonStandard.Cli {
 		private void Write(ConsoleBody body, bool next, int start, int count) {
 			int end = start + count;
 			for (int i = start; i < end; ++i) {
-				ConsoleDiffUnit unit = delta[i];
+				ConsoleDiffUnit unit = changes[i];
 				body.SetAt(unit.coord, next ? unit.next : unit.prev);
 			}
 		}
 
 		public Coord GetCoord(int inputIndex) {
-			if (inputIndex < 0) return Start;
-			if (inputIndex >= delta.Count) { return FinalIndexCoord(); }
+			if (inputIndex < 0) return StartPosition;
+			if (inputIndex >= changes.Count) { return FinalIndexCoord(); }
 			//UnityEngine.Debug.Log("not end, not start: "+inputIndex+":"+ delta[inputIndex].coord);
-			return delta[inputIndex].coord;
+			return changes[inputIndex].coord;
 		}
 
 		internal void Clear() {
-			delta.Clear();
+			changes.Clear();
 		}
 
 		public string ToSimpleString() {
 			StringBuilder sb = new StringBuilder();
-			for (int i = 0; i < delta.Count; ++i) {
-				sb.Append(delta[i].next.Letter);
+			for (int i = 0; i < changes.Count; ++i) {
+				sb.Append(changes[i].next.Letter);
 			}
 			return sb.ToString();
 		}
 		public string ToSimpleStringPrev() {
 			StringBuilder sb = new StringBuilder();
-			for (int i = 0; i < delta.Count; ++i) {
-				sb.Append(delta[i].prev.Letter);
+			for (int i = 0; i < changes.Count; ++i) {
+				sb.Append(changes[i].prev.Letter);
 			}
 			return sb.ToString();
 		}
 
 		public override string ToString() {
 			StringBuilder sb = new StringBuilder();
-			Coord c = Start;
+			Coord c = StartPosition;
 			sb.Append(c).Append("\"");
-			for (int i = 0; i < delta.Count; ++i) {
-				ConsoleDiffUnit du = delta[i];
+			for (int i = 0; i < changes.Count; ++i) {
+				ConsoleDiffUnit du = changes[i];
 				if (c != du.coord) {
 					sb.Append("\" ").Append(du.coord).Append("\"");
 					c = du.coord;

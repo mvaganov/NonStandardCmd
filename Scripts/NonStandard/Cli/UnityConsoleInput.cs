@@ -40,9 +40,11 @@ namespace NonStandard.Cli {
 
 		private void BindDefaultKeyInput() {
 			UserInput uinput = GetComponent<UserInput>();
+			// unbind perviously expected key-char inputs
+			base.DisableKeyMapByPress('\n');
 			// bind expected non-key-char console inputs
 			uinput.AddBindingIfMissing(new InputControlBinding("console submit input", keyMapNames.normal + "/SubmitInput",
-				ControlType.Button, new EventBind(this, nameof(FinishCurrentInput)), KeyboardInput.Path("enter")));
+				ControlType.Button, new EventBind(this, nameof(SubmitText)), KeyboardInput.Path("enter")));
 			uinput.AddBindingIfMissing(new InputControlBinding("console cursor move up", keyMapNames.normal + "/UpArrow",
 				ControlType.Button, new EventBind(this, nameof(MoveCursorUp)), KeyboardInput.Path("upArrow")));
 			uinput.AddBindingIfMissing(new InputControlBinding("console cursor move left", keyMapNames.normal + "/LeftArrow",
@@ -76,7 +78,6 @@ namespace NonStandard.Cli {
 			string txt = Flush();
 			if (string.IsNullOrEmpty(txt)) { return; }
 			WriteInputText(txt);
-			_console.State.RefreshCursorValid();
 		}
 		#endregion Unity Lifecycle
 
@@ -128,14 +129,14 @@ namespace NonStandard.Cli {
 		public void ShiftWindowRight(InputAction.CallbackContext c) { if (c.performed) ShiftWindowRight(); }
 		public void PasteFromClipboard(InputAction.CallbackContext c) { if (c.performed) PasteFromClipboard(); }
 		public void CopyToClipboard(InputAction.CallbackContext c) { if (c.performed) CopyToClipboard(); }
-		public void FinishCurrentInput(InputAction.CallbackContext c) { if (c.performed) FinishCurrentInput(); }
+		public void SubmitText(InputAction.CallbackContext c) { if (c.performed) SubmitText(); }
 		#endregion Input Callbacks
 
 		#region Console Controls
 		public void RefreshLastInputGood() => RefreshLastInput(colors.codeCorrectInput);
 		public void RefreshLastInputError() => RefreshLastInput(colors.codeInvalidInput);
 		public void RefreshLastInput(int colorCode) {
-			List<ConsoleDiffUnit> characterDifferences = _lastInput.delta;
+			List<ConsoleDiffUnit> characterDifferences = _lastInput.changes;
 			for (int i = 0; i < characterDifferences.Count; ++i) {
 				characterDifferences[i] = characterDifferences[i].WithDifferentColor((byte)colorCode);
 			}
@@ -143,8 +144,7 @@ namespace NonStandard.Cli {
 		}
 
 		private void MovCur(Coord dir) {
-			_console.State.CursorPosition += dir;
-			_console.State.RefreshCursorValid();
+			_console.MoveCursor(dir);
 		}
 
 		private void MovWin(Coord dir) {
@@ -170,14 +170,22 @@ namespace NonStandard.Cli {
 		public void ShiftWindowLeft() { MovWin(Coord.Left); }
 		public void ShiftWindowDown() { MovWin(Coord.Down); }
 		public void ShiftWindowRight() { MovWin(Coord.Right); }
-		public void FinishCurrentInput() {
+		public void InputErrorCallback(string input) {
+			Debug.LogError(input);
+			RefreshLastInputError();
+		}
+		public void InputGoodCallback(string input) {
+			Debug.Log(input);
+			RefreshLastInputGood();
+		}
+		public void SubmitText() {
 			ConsoleDiff temp = _lastInput;
 			_lastInput = _console.Input;
 			_console.Input = temp;
+			string input = LastInputText;
 			_console.Input.Clear();
 			_cout.Write("\n");
 			_console.RestartInput();
-			string input = LastInputText;
 			Debug.Log("[" + input + "]");
 			if (callbacks.enable) {
 				callbacks.OnTextSubmit.Invoke(input);
@@ -185,21 +193,16 @@ namespace NonStandard.Cli {
 				Debug.LogWarning("ignoring [" + input + "]");
 			}
 		}
-
-		public void InputErrorCallback(string input) {
-			Debug.LogError(input);
-			RefreshLastInputError();
-		}
-
-		public void InputGoodCallback(string input) {
-			Debug.Log(input);
-			RefreshLastInputGood();
-		}
-
 		public void WriteInputText(string inputText) {
+			Debug.Log(_console.State.Cursor.indexInInput);
+			if (_console.State.Cursor.indexInInput == 0 && _console.State.Input.StartPosition != Coord.NegativeOne) {
+				_console.State.Cursor.position2d = _console.State.Input.StartPosition;
+			}
+
 			if (colors.codeActiveInput > 0) { _console.State.PushForeColor((byte)colors.codeActiveInput); }
 			_console.State.WriteInput(inputText);
 			if (colors.codeActiveInput > 0) { _console.State.PopForeColor(); }
+			_console.State.RefreshCursorValid();
 		}
 		#endregion Console Controls
 	}

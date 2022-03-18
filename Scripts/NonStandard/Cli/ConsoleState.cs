@@ -86,8 +86,8 @@ namespace NonStandard.Cli {
 
 		public void Write(string text, ConsoleDiff input, ref int inputIndex) {
 			Coord oldSize = _output.Size;
-			if (input != null && input.Start == Coord.NegativeOne) {
-				input.Start = CursorPosition;
+			if (input != null && input.StartPosition == Coord.NegativeOne) {
+				input.StartPosition = CursorPosition;
 			}
 			_output.Write(text, ref Cursor.position2d, input, ref inputIndex);
 			if (_output.Size != oldSize) {
@@ -101,8 +101,8 @@ namespace NonStandard.Cli {
 		}
 
 		public void RefreshInput(ConsoleDiff diff) {
-			for (int i = 0; i < diff.delta.Count; i++) {
-				ConsoleDiffUnit consoleDiffUnit = diff.delta[i];
+			for (int i = 0; i < diff.changes.Count; i++) {
+				ConsoleDiffUnit consoleDiffUnit = diff.changes[i];
 				Coord cursor = consoleDiffUnit.coord;
 				//body.Write(consoleDiffUnit.next.Letter.ToString(), null, ref writeIndex, ref cursor);
 				_output.PrintTile(consoleDiffUnit.next, ref cursor);
@@ -121,7 +121,7 @@ namespace NonStandard.Cli {
 		}
 		public void RestartInput() {
 			Cursor.indexInInput = 0;
-			_input.Start = Cursor.position2d;
+			_input.StartPosition = Cursor.position2d;
 		}
 
 		[System.Serializable] public class CursorState {
@@ -146,8 +146,14 @@ namespace NonStandard.Cli {
 				get => windowSizing != WindowSizing.Unconstrained ? viewRect.Size : Maximum.Size;
 				set { viewRect.Size = value; }
 			}
-			public int Height { get => windowSizing != WindowSizing.Unconstrained ? viewRect.Height : -1; set => viewRect.Height = value; }
-			public int Width { get => windowSizing != WindowSizing.Unconstrained ? viewRect.Width : -1; set => viewRect.Width = value; }
+			public int Height {
+				get => windowSizing != WindowSizing.Unconstrained ? viewRect.Height : -1;
+				set => viewRect.Height = value;
+			}
+			public int Width {
+				get => windowSizing != WindowSizing.Unconstrained ? viewRect.Width : -1;
+				set => viewRect.Width = value;
+			}
 			public float ScrollVertical {
 				get => (float)viewRect.Top / (body.Size.Y - viewRect.Height);
 				set => viewRect.PositionY = (short)(value * (body.Size.Y - viewRect.Height));
@@ -157,18 +163,31 @@ namespace NonStandard.Cli {
 				set => viewRect.PositionX = (short)(value * (body.Size.X - viewRect.Width));
 			}
 			internal void UpdatePosition() {
-				if (viewRect.PositionX < 0) { viewRect.PositionX -= viewRect.PositionX; } else if (viewRect.Right > body.Size.col) {
-					if (viewRect.Width >= body.Size.col) { viewRect.PositionX = 0; } else { viewRect.PositionX -= (short)(viewRect.Right - body.Size.col); }
+				if (viewRect.PositionX < 0) {
+					viewRect.PositionX -= viewRect.PositionX;
+				} else if (viewRect.Right > body.Size.col) {
+					if (viewRect.Width >= body.Size.col) {
+						viewRect.PositionX = 0;
+					} else {
+						viewRect.PositionX -= (short)(viewRect.Right - body.Size.col);
+					}
 				}
-				if (viewRect.PositionY < 0) { viewRect.PositionY -= viewRect.PositionY; } else if (viewRect.Bottom > body.Size.row) {
-					if (viewRect.Height >= body.Size.row) { viewRect.PositionY = 0; } else { viewRect.PositionY -= (short)(viewRect.Bottom - body.Size.row); }
+				if (viewRect.PositionY < 0) {
+					viewRect.PositionY -= viewRect.PositionY;
+				} else if (viewRect.Bottom > body.Size.row) {
+					if (viewRect.Height >= body.Size.row) { viewRect.PositionY = 0;
+					} else {
+						viewRect.PositionY -= (short)(viewRect.Bottom - body.Size.row);
+					}
 				}
 			}
 			public void ScrollRenderWindow(Coord direction) {
 				viewRect.Position += direction;
 				UpdatePosition();
 			}
-			public void ResetWindowSize() { viewRect.Size = new Coord(Coord.Max.X - 1, Coord.Max.Y - 1); }
+			public void ResetWindowSize() {
+				viewRect.Size = new Coord(Coord.Max.X - 1, Coord.Max.Y - 1);
+			}
 		}
 	}
 }

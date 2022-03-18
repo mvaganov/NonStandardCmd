@@ -49,18 +49,6 @@ namespace NonStandard.Cli {
 			colorSettings.FillInDefaultPalette();
 		}
 
-		void Start() {
-
-		}
-
-		// Update is called once per frame
-		void Update() {
-
-		}
-
-		public void RestartInput() => State.RestartInput();
-
-
 		[System.Serializable] public class ColorSettings {
 			[Range(0, 1)] public float foregroundAlpha = 1f;
 			[Range(0, 1)] public float backgroundAlpha = 0.5f;
@@ -89,6 +77,8 @@ namespace NonStandard.Cli {
 				return ConsoleColorPalette.Count - 1;
 			}
 		}
+
+		public void RestartInput() => State.RestartInput();
 		public int AddConsoleColorPalette(ColorRGBA colorRgba) { return colorSettings.AddConsoleColor(colorRgba); }
 		public int GetConsoleColorPaletteCount() { return colorSettings.ConsoleColorPalette.Count; }
 		public byte DefaultForegroundColor => State.Output.defaultColors.fore;
@@ -98,6 +88,14 @@ namespace NonStandard.Cli {
 				code = foreground ? DefaultForegroundColor : DefaultBackgroundColor;
 			}
 			return colorSettings.ConsoleColorPalette[code];
+		}
+		public void MoveCursor(Coord dir) {
+			State.CursorPosition += dir;
+			State.RefreshCursorValid();
+		}
+		public void MoveWindowView(Coord dir) {
+			State.Window.ScrollRenderWindow(dir);
+			State.textNeedsRefresh = true;
 		}
 	}
 }

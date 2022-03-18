@@ -129,8 +129,8 @@ namespace NonStandard.Cli {
 		}
 
 		public void Write(string text, ref Coord writeCursor, ConsoleDiff diff, ref int inputIndex) {
-			if (diff.Start == Coord.NegativeOne) {
-				diff.Start = writeCursor;
+			if (diff.StartPosition == Coord.NegativeOne) {
+				diff.StartPosition = writeCursor;
 				UnityEngine.Debug.LogWarning("...needed to initialize diff.Start...");
 			}
 			//UnityEngine.Debug.Log("writing \'" + text + "\' at " + inputIndex + " " + writeCursor + "   " + diff);
