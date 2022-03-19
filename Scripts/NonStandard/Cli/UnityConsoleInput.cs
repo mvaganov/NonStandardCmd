@@ -148,8 +148,7 @@ namespace NonStandard.Cli {
 		}
 
 		private void MovWin(Coord dir) {
-			_console.State.Window.ScrollRenderWindow(dir);
-			_console.State.textNeedsRefresh = true;
+			_console.MoveWindowView(dir);
 		}
 
 		public void PasteFromClipboard() {
@@ -194,15 +193,7 @@ namespace NonStandard.Cli {
 			}
 		}
 		public void WriteInputText(string inputText) {
-			Debug.Log(_console.State.Cursor.indexInInput);
-			if (_console.State.Cursor.indexInInput == 0 && _console.State.Input.StartPosition != Coord.NegativeOne) {
-				_console.State.Cursor.position2d = _console.State.Input.StartPosition;
-			}
-
-			if (colors.codeActiveInput > 0) { _console.State.PushForeColor((byte)colors.codeActiveInput); }
-			_console.State.WriteInput(inputText);
-			if (colors.codeActiveInput > 0) { _console.State.PopForeColor(); }
-			_console.State.RefreshCursorValid();
+			_console.WriteInputText(inputText, (byte)colors.codeActiveInput);
 		}
 		#endregion Console Controls
 	}

@@ -74,6 +74,13 @@ namespace NonStandard.Cli {
 			Write(inputText, _input, ref Cursor.indexInInput);
 		}
 
+		public void WriteInputWithColor(string inputText, byte color) {
+			if (color > 0) { PushForeColor(color); }
+			WriteInput(inputText);
+			if (color > 0) { PopForeColor(); }
+			RefreshCursorValid();
+		}
+
 		public void Write(string text) {
 			Coord oldSize = _output.Size;
 			_output.Write(text, ref Cursor.position2d);
@@ -122,6 +129,19 @@ namespace NonStandard.Cli {
 		public void RestartInput() {
 			Cursor.indexInInput = 0;
 			_input.StartPosition = Cursor.position2d;
+		}
+
+		public void KeepInputCursorOnInput() {
+			if (Cursor.indexInInput == 0 && Input.StartPosition != Coord.NegativeOne) {
+				Cursor.position2d = Input.StartPosition;
+			} else if (Cursor.indexInInput > 0 && Cursor.indexInInput == Input.changes.Count) {
+				ConsoleDiffUnit last = Input.changes[Input.changes.Count - 1];
+				if (last.next != '\n') {
+					Cursor.position2d = last.coord + Coord.Right;
+				} else {
+					Cursor.position2d = new Coord(Input.inputArea.Min.x, last.coord.row + 1);
+				}
+			}
 		}
 
 		[System.Serializable] public class CursorState {

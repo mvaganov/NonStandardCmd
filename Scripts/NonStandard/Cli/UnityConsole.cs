@@ -97,5 +97,9 @@ namespace NonStandard.Cli {
 			State.Window.ScrollRenderWindow(dir);
 			State.textNeedsRefresh = true;
 		}
+		public void WriteInputText(string inputText, byte color = 0) {
+			State.KeepInputCursorOnInput();
+			State.WriteInputWithColor(inputText, color);
+		}
 	}
 }
