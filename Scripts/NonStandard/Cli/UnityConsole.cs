@@ -101,5 +101,9 @@ namespace NonStandard.Cli {
 			State.KeepInputCursorOnInput();
 			State.WriteInputWithColor(inputText, color);
 		}
+		public void Write(char c) => State.Write(c);
+		public void Write(string text) => State.Write(text);
+		public void Write(object o) => State.Write(o);
+		public void WriteLine(string text) => Write(text + "\n");
 	}
 }
