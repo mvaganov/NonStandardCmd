@@ -74,7 +74,8 @@ namespace NonStandard.Cli {
 			_cout.Write("testing");
 		}
 
-		void Update() {
+		protected override void Update() {
+			base.Update();
 			string txt = Flush();
 			if (string.IsNullOrEmpty(txt)) { return; }
 			WriteInputText(txt);

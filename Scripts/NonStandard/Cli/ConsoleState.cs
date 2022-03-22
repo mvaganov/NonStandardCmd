@@ -91,6 +91,10 @@ namespace NonStandard.Cli {
 			textNeedsRefresh = true;
 		}
 
+		public void Write(string text, byte color) {
+			PushForeColor(color); Write(text); PopForeColor();
+		}
+
 		public void Write(string text, ConsoleDiff input, ref int inputIndex) {
 			Coord oldSize = _output.Size;
 			if (input != null && input.StartPosition == Coord.NegativeOne) {

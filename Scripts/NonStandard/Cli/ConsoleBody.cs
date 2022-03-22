@@ -107,6 +107,8 @@ namespace NonStandard.Cli {
 			}
 		}
 
+		private Coord whereCursorStarted,whereCursorEnded;
+
 		public void Write(string text, ref Coord writeCursor) {
 			for (int i = 0; i < text.Length; ++i) {
 				char c = text[i];

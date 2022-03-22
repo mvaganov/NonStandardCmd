@@ -330,8 +330,20 @@ namespace NonStandard.Cli {
 			public ColorRGBA color;
 			public float height;
 			public char letter;
-			public Tile(char letter, ColorRGBA color, float height) { this.letter = letter; this.height = height; this.color = color; }
+			public short tag;
+			public Tile(char letter, ColorRGBA color, float height) {
+				this.letter = letter; this.height = height; this.color = color; tag = 0;
+			}
+			public Tile(char letter, ColorRGBA color, float height, short tag) {
+				this.letter = letter; this.height = height; this.color = color; this.tag = tag;
+			}
 		}
 		#endregion Tile
+
+		#region Tags
+		public Dictionary<short, string> tags = new Dictionary<short, string>();
+		private short nextFreeTag = 0;
+
+		#endregion Tags
 	}
 }

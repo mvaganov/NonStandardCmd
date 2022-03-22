@@ -1,4 +1,5 @@
 ﻿// code by michael vaganov, released to the public domain via the unlicense (https://unlicense.org/)
+using NonStandard.Extension;
 using UnityEngine;
 
 namespace NonStandard.Cli {
@@ -7,6 +8,11 @@ namespace NonStandard.Cli {
 		float fontSizeRatio = 1;
 		private Vector3[] cursorMeshPosition = new Vector3[4];
 		[HideInInspector] public ConsoleState.CursorState state;
+
+		public int CursorSize {
+			get { return (int)(transform.localScale.MagnitudeManhattan() / 3); }
+			set { transform.localScale = Vector3.one * (value / 100f); }
+		}
 
 		private void Reset() {
 			console = GetComponentInParent<UnityConsole>();

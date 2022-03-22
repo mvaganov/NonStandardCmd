@@ -7,11 +7,14 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Controls;
 using UnityEngine.UI;
 
 namespace NonStandard.Cli {
 	[RequireComponent(typeof(UserInput))]
 	public class UnityConsoleUiToggle : MonoBehaviour {
+		public const string DefaultActivateKey = "<Keyboard>/backquote";
+		public const string DefaultDeactivateKey = "<Keyboard>/escape";
 		public const string UiKeyMapName = "consoleUi";
 		[Tooltip("which state the console input is active in")]
 		public ConsoleUiState consoleInputActive = ConsoleUiState.ScreenSpace;
@@ -40,10 +43,10 @@ namespace NonStandard.Cli {
 			UserInput uinput = GetComponent<UserInput>();
 			uinput.AddBindingIfMissing(new InputControlBinding(
 				"console pause game and put console in foreground", UiKeyMapName + "/ShowCmdLine",
-				ControlType.Button, new EventBind(this, nameof(SetScreenSpaceCanvas)), "<Keyboard>/backquote"));
+				ControlType.Button, new EventBind(this, nameof(SetScreenSpaceCanvas)), DefaultActivateKey));
 			uinput.AddBindingIfMissing(new InputControlBinding(
 				"console unpause game and hide console in foreground", UiKeyMapName + "/HideCmdLine",
-				ControlType.Button, new EventBind(this, nameof(SetWorldSpaceCanvas)), "<Keyboard>/escape"));
+				ControlType.Button, new EventBind(this, nameof(SetWorldSpaceCanvas)), DefaultDeactivateKey));
 			UnityConsoleInput uc = GetComponent<UnityConsoleInput>();
 			uinput.RemoveDefaultActionMapToBind(uc.KeyMapName);
 			uinput.AddDefaultActionMapToBind(UiKeyMapName);
@@ -79,7 +82,7 @@ namespace NonStandard.Cli {
 		private void Start() {
 			ConsoleUiState state = GetCurrentState();
 			if (state != ConsoleUiState.None) {
-				ActivateConsoleInput(MayActivate(state));
+				ActivateConsoleInput(MayActivate(state), null);
 			}
 		}
 
@@ -95,9 +98,11 @@ namespace NonStandard.Cli {
 			return consoleInputActive == target || consoleInputActive == ConsoleUiState.Both;
 		}
 
-		public void ActivateConsoleInput(bool enable) {
+		public void ActivateConsoleInput(bool enable, KeyControl activatingKey) {
 			UnityConsoleInput uci = GetComponent<UnityConsoleInput>();
-			if (uci != null) { uci.enabled = enable; }
+			if (uci != null) {
+				uci.SetEnableFromKey(enable, activatingKey);
+			}
 			if (callbacks.enable) {
 				if (enable) {
 					callbacks.WhenThisActivates.Invoke();
@@ -121,7 +126,7 @@ namespace NonStandard.Cli {
 				}
 			}
 			// Debug.Log("set screenspace "+(context.control as KeyControl).name);
-			ActivateConsoleInput(MayActivate(ConsoleUiState.ScreenSpace));
+			ActivateConsoleInput(MayActivate(ConsoleUiState.ScreenSpace), context.control as KeyControl);
 			EnqueueConsoleTextRefresh();
 		}
 
@@ -146,7 +151,7 @@ namespace NonStandard.Cli {
 				rm2d.enabled = true;
 			}
 			// Debug.Log("set worldspace "+(context.control as KeyControl).name);
-			ActivateConsoleInput(MayActivate(ConsoleUiState.WorldSpace));
+			ActivateConsoleInput(MayActivate(ConsoleUiState.WorldSpace), context.control as KeyControl);
 			EnqueueConsoleTextRefresh();
 		}
 
