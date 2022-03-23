@@ -4,6 +4,9 @@ using NonStandard.Inputs;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -22,6 +25,8 @@ namespace NonStandard.Cli {
 		public ConsoleState State;
 		public ColorSettings colorSettings = new ColorSettings();
 		public UnityConsoleCursor cursorUI;
+		public bool watchMouse = true;
+		public Coord mouseOver;
 		public UnityConsoleOutput cout => _cout ? _cout : _cout = GetComponent<UnityConsoleOutput>();
 		public ConsoleDiff Input { get => State.Input; set => State.Input = value; }
 		public bool CursorVisible {
@@ -35,7 +40,7 @@ namespace NonStandard.Cli {
 
 		[Flags] public enum LogOptions { None = 0, UnityDebugLog = 1
 #if NONSTANDARD_SHOW
-			, NonStandardShow = 2
+			, NonstandardShowLog = 2
 #endif
 		}
 		public void RefreshCursorPosition() => cursorUI.RefreshCursorPosition(this);
@@ -62,7 +67,7 @@ namespace NonStandard.Cli {
 				Application.logMessageReceived += Application_logMessageReceived;
 			}
 #if NONSTANDARD_SHOW
-			if (logging.HasFlag(LogOptions.NonStandardShow)) {
+			if (logging.HasFlag(LogOptions.NonstandardShowLog)) {
 				Show.Route.onLog += Log;
 				Show.Route.onError += LogError;
 				Show.Route.onWarning += LogWarning;
@@ -70,6 +75,12 @@ namespace NonStandard.Cli {
 #endif
 			Show.Log("Show.Log test "+logging);
 			Debug.Log("Debug.Log test "+logging);
+		}
+
+		private void Update() {
+			if (watchMouse) {
+				WatchMouse();
+			}
 		}
 
 		private void OnDestroy() {
@@ -80,6 +91,52 @@ namespace NonStandard.Cli {
 			Show.Route.onWarning -= LogWarning;
 #endif
 		}
+
+		//public GraphicRaycaster canvasRaycaster;
+		private List<RaycastResult> list = new List<RaycastResult>();
+		private void WatchMouse() {
+			//UnityConsoleUiToggle uiToggle = GetComponent<UnityConsoleUiToggle>();
+			//UnityConsoleUiToggle.ConsoleUiState state = uiToggle.GetCurrentState();
+			//switch (state) {
+			//	case UnityConsoleUiToggle.ConsoleUiState.ScreenSpace:
+			//		list.Clear();
+			//		Vector2 screenPoint = Mouse.current.position.ReadValue();// Camera.main.WorldToScreenPoint(target.position);
+			//		PointerEventData ed = new PointerEventData(EventSystem.current);
+			//		ed.position = screenPoint;
+			//		canvasRaycaster.Raycast(ed, list);
+			//		break;
+			//	case UnityConsoleUiToggle.ConsoleUiState.WorldSpace:
+			//		Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
+			//		Canvas canvas = _cout.inputField.GetComponentInParent<Canvas>();
+			//		break;
+			//}
+			list.Clear();
+			Vector2 screenPoint = Mouse.current.position.ReadValue();// Camera.main.WorldToScreenPoint(target.position);
+			PointerEventData ed = new PointerEventData(EventSystem.current);
+			ed.position = screenPoint;
+			EventSystem.current.RaycastAll(ed, list);
+			//canvasRaycaster.Raycast(ed, list);
+			debugtest = list.JoinToString(", ", r => r.gameObject.name+":"+r.worldPosition);
+			if (list.Count > 0) {
+				RectTransform rt = list[0].gameObject.GetComponent<RectTransform>();
+				Vector3 worldPos = list[0].worldPosition;
+				Vector3[] corners = new Vector3[4];
+				rt.GetWorldCorners(corners);
+				Vector3 lowerLeft = corners[0];
+				Vector3 upperLeft = corners[1];
+				Vector3 upperRight = corners[2];
+				Vector3 lowerRight = corners[3];
+				Vector3 xhat = lowerRight - lowerLeft;
+				Vector3 yhat = upperLeft - lowerLeft;
+				Vector2 worldSize = new Vector2(xhat.magnitude, yhat.magnitude);
+				Vector3 delta = worldPos - lowerLeft;
+				Vector2 panelPos = new Vector2(Vector3.Dot(delta, xhat), Vector3.Dot(delta, yhat));
+				debugtest = panelPos+" : "+worldSize+" --- "+corners.JoinToString();
+			}
+			//canvas.
+			//Vector3 hit = 
+		}
+		public string debugtest;
 
 		private void Application_logMessageReceived(string condition, string stackTrace, LogType type) {
 			Coord whereCursorStarted = State.Cursor.position2d;
@@ -96,9 +153,9 @@ namespace NonStandard.Cli {
 					Log(condition);
 					break;
 			}
-			Coord whereCursorEnd = State.Cursor.position2d;
-			// create a text span with the stack trace as metadata to that span
-			// add the span to a sorted data structure
+			Coord whereCursorEnded = State.Cursor.position2d;
+			_cout.AddTagToTextSpan(whereCursorStarted, whereCursorEnded, stackTrace);
+
 		}
 
 		[System.Serializable] public class ColorSettings {

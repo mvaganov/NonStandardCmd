@@ -341,8 +341,24 @@ namespace NonStandard.Cli {
 		#endregion Tile
 
 		#region Tags
-		public Dictionary<short, string> tags = new Dictionary<short, string>();
+		public Dictionary<short, TextSpan> tags = new Dictionary<short, TextSpan>();
 		private short nextFreeTag = 0;
+		public List<TextSpan> _textSpans = new List<TextSpan>();
+
+		public short AddTagToTextSpan(Coord start, Coord end, object tag) {
+			// create a text span with the stack trace as metadata to that span
+			TextSpan ts = new TextSpan(start, end, tag);
+			// add the span to a sorted data structure
+			_textSpans.BinarySearchInsert(ts);
+			short tagId = nextFreeTag++;
+			tags[tagId] = ts;
+			return tagId;
+		}
+
+		public List<TextSpan> GetTag(Coord coord) {
+			List<TextSpan> found = TextSpan.GetSpans(_textSpans, coord);
+			return found;
+		}
 
 		#endregion Tags
 	}
