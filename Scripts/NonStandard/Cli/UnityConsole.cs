@@ -95,21 +95,7 @@ namespace NonStandard.Cli {
 		//public GraphicRaycaster canvasRaycaster;
 		private List<RaycastResult> list = new List<RaycastResult>();
 		private void WatchMouse() {
-			//UnityConsoleUiToggle uiToggle = GetComponent<UnityConsoleUiToggle>();
-			//UnityConsoleUiToggle.ConsoleUiState state = uiToggle.GetCurrentState();
-			//switch (state) {
-			//	case UnityConsoleUiToggle.ConsoleUiState.ScreenSpace:
-			//		list.Clear();
-			//		Vector2 screenPoint = Mouse.current.position.ReadValue();// Camera.main.WorldToScreenPoint(target.position);
-			//		PointerEventData ed = new PointerEventData(EventSystem.current);
-			//		ed.position = screenPoint;
-			//		canvasRaycaster.Raycast(ed, list);
-			//		break;
-			//	case UnityConsoleUiToggle.ConsoleUiState.WorldSpace:
-			//		Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
-			//		Canvas canvas = _cout.inputField.GetComponentInParent<Canvas>();
-			//		break;
-			//}
+			UnityConsoleUiToggle uiToggle = GetComponent<UnityConsoleUiToggle>();
 			list.Clear();
 			Vector2 screenPoint = Mouse.current.position.ReadValue();// Camera.main.WorldToScreenPoint(target.position);
 			PointerEventData ed = new PointerEventData(EventSystem.current);
@@ -122,19 +108,39 @@ namespace NonStandard.Cli {
 				Vector3 worldPos = list[0].worldPosition;
 				Vector3[] corners = new Vector3[4];
 				rt.GetWorldCorners(corners);
-				Vector3 lowerLeft = corners[0];
-				Vector3 upperLeft = corners[1];
-				Vector3 upperRight = corners[2];
-				Vector3 lowerRight = corners[3];
-				Vector3 xhat = lowerRight - lowerLeft;
-				Vector3 yhat = upperLeft - lowerLeft;
-				Vector2 worldSize = new Vector2(xhat.magnitude, yhat.magnitude);
-				Vector3 delta = worldPos - lowerLeft;
-				Vector2 panelPos = new Vector2(Vector3.Dot(delta, xhat), Vector3.Dot(delta, yhat));
-				debugtest = panelPos+" : "+worldSize+" --- "+corners.JoinToString();
+				Vector3 windowLowerLeft = corners[0];
+				Vector3 windowUpperLeft = corners[1];
+				Vector3 windowUpperRight = corners[2];
+				Vector3 windowLowerRight = corners[3];
+				Vector3 widthDelta = windowLowerRight - windowLowerLeft;
+				Vector3 heightDelta = windowLowerLeft - windowUpperLeft;
+				float width = widthDelta.magnitude;
+				float height = heightDelta.magnitude;
+				Vector3 xhat = widthDelta / width;
+				Vector3 yhat = heightDelta / height;
+
+				Vector2 worldSize = new Vector2(widthDelta.magnitude, heightDelta.magnitude);
+				Vector3 delta = worldPos - windowUpperLeft;
+				Vector2 panelPosWorldScale = new Vector2(Vector3.Dot(xhat, delta), Vector3.Dot(yhat, delta));
+				Vector3 scale = uiToggle._worldSpaceCanvas.transform.localScale;
+				Vector2 panelPosPixelScale = new Vector2(panelPosWorldScale.x / scale.x, panelPosWorldScale.y / scale.y);
+				Lines.Make("top").Line(windowUpperLeft, windowUpperLeft + xhat * panelPosWorldScale.x, Color.red, 1f/128);
+				Lines.Make("left").Line(windowUpperLeft, windowUpperLeft + yhat * panelPosWorldScale.y, Color.green, 1f / 128);
+				Lines.Make("cursor").Circle(worldPos, Vector3.forward, Color.white);
+				UnityEngine.TextCore.FaceInfo face = _cout.inputField.fontAsset.faceInfo;
+				Vector2 tileSize = _cout.inputField.textComponent.GetPreferredValues("#");// new Vector2(face.tabWidth, face.lineHeight);
+				Vector2 cursorPosition = new Vector2(panelPosPixelScale.x / tileSize.x, panelPosPixelScale.y / tileSize.y);
+				Vector2 clippedPosition = new Vector2((int)cursorPosition.x, (int)cursorPosition.y);
+				
+				Vector2 cursorPixelPos = new Vector2(clippedPosition.x * tileSize.x, clippedPosition.y * tileSize.y);
+				Vector2 cursorRealPos = new Vector2(cursorPixelPos.x * scale.x, cursorPixelPos.y * scale.y);
+				Vector3 cursorWorldPos = xhat * cursorRealPos.x + yhat * cursorRealPos.y + windowUpperLeft;
+				Vector3 worldTileWidth = xhat * tileSize.x * scale.x;
+				Vector3 worldTileHeight = yhat * tileSize.y * scale.y;
+				Lines.Make("cbot").Line(cursorWorldPos, cursorWorldPos + worldTileWidth, Color.yellow, 1f/64);
+				Lines.Make("clef").Line(cursorWorldPos, cursorWorldPos + worldTileHeight, Color.yellow, 1f / 64);
+				debugtest = clippedPosition + "~> " + cursorPixelPos + " - " + panelPosPixelScale + " : " + worldSize + " " + corners.JoinToString();
 			}
-			//canvas.
-			//Vector3 hit = 
 		}
 		public string debugtest;
 
