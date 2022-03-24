@@ -26,6 +26,7 @@ namespace NonStandard.Cli {
 		public ColorSettings colorSettings = new ColorSettings();
 		public UnityConsoleCursor cursorUI;
 		public bool watchMouse = true;
+		public bool debugShowMouseOverTile = true;
 		public Coord mouseOver;
 		public UnityConsoleOutput cout => _cout ? _cout : _cout = GetComponent<UnityConsoleOutput>();
 		public ConsoleDiff Input { get => State.Input; set => State.Input = value; }
@@ -94,56 +95,34 @@ namespace NonStandard.Cli {
 
 		//public GraphicRaycaster canvasRaycaster;
 		private List<RaycastResult> list = new List<RaycastResult>();
-		private void WatchMouse() {
-			UnityConsoleUiToggle uiToggle = GetComponent<UnityConsoleUiToggle>();
-			list.Clear();
-			Vector2 screenPoint = Mouse.current.position.ReadValue();// Camera.main.WorldToScreenPoint(target.position);
-			PointerEventData ed = new PointerEventData(EventSystem.current);
-			ed.position = screenPoint;
-			EventSystem.current.RaycastAll(ed, list);
-			//canvasRaycaster.Raycast(ed, list);
-			debugtest = list.JoinToString(", ", r => r.gameObject.name+":"+r.worldPosition);
-			if (list.Count > 0) {
-				RectTransform rt = list[0].gameObject.GetComponent<RectTransform>();
-				Vector3 worldPos = list[0].worldPosition;
-				Vector3[] corners = new Vector3[4];
-				rt.GetWorldCorners(corners);
-				Vector3 windowLowerLeft = corners[0];
-				Vector3 windowUpperLeft = corners[1];
-				Vector3 windowUpperRight = corners[2];
-				Vector3 windowLowerRight = corners[3];
-				Vector3 widthDelta = windowLowerRight - windowLowerLeft;
-				Vector3 heightDelta = windowLowerLeft - windowUpperLeft;
-				float width = widthDelta.magnitude;
-				float height = heightDelta.magnitude;
-				Vector3 xhat = widthDelta / width;
-				Vector3 yhat = heightDelta / height;
 
-				Vector2 worldSize = new Vector2(widthDelta.magnitude, heightDelta.magnitude);
-				Vector3 delta = worldPos - windowUpperLeft;
-				Vector2 panelPosWorldScale = new Vector2(Vector3.Dot(xhat, delta), Vector3.Dot(yhat, delta));
-				Vector3 scale = uiToggle._worldSpaceCanvas.transform.localScale;
-				Vector2 panelPosPixelScale = new Vector2(panelPosWorldScale.x / scale.x, panelPosWorldScale.y / scale.y);
-				Lines.Make("top").Line(windowUpperLeft, windowUpperLeft + xhat * panelPosWorldScale.x, Color.red, 1f/128);
-				Lines.Make("left").Line(windowUpperLeft, windowUpperLeft + yhat * panelPosWorldScale.y, Color.green, 1f / 128);
-				Lines.Make("cursor").Circle(worldPos, Vector3.forward, Color.white);
-				UnityEngine.TextCore.FaceInfo face = _cout.inputField.fontAsset.faceInfo;
-				Vector2 tileSize = _cout.inputField.textComponent.GetPreferredValues("#");// new Vector2(face.tabWidth, face.lineHeight);
-				Vector2 cursorPosition = new Vector2(panelPosPixelScale.x / tileSize.x, panelPosPixelScale.y / tileSize.y);
-				Vector2 clippedPosition = new Vector2((int)cursorPosition.x, (int)cursorPosition.y);
-				
-				Vector2 cursorPixelPos = new Vector2(clippedPosition.x * tileSize.x, clippedPosition.y * tileSize.y);
-				Vector2 cursorRealPos = new Vector2(cursorPixelPos.x * scale.x, cursorPixelPos.y * scale.y);
-				Vector3 cursorWorldPos = xhat * cursorRealPos.x + yhat * cursorRealPos.y + windowUpperLeft;
-				Vector3 worldTileWidth = xhat * tileSize.x * scale.x;
-				Vector3 worldTileHeight = yhat * tileSize.y * scale.y;
-				Lines.Make("cbot").Line(cursorWorldPos, cursorWorldPos + worldTileWidth, Color.yellow, 1f/64);
-				Lines.Make("clef").Line(cursorWorldPos, cursorWorldPos + worldTileHeight, Color.yellow, 1f / 64);
-				debugtest = clippedPosition + "~> " + cursorPixelPos + " - " + panelPosPixelScale + " : " + worldSize + " " + corners.JoinToString();
+		private bool IsMyChild(Transform t) {
+			Transform self = transform;
+			do {
+				t = t.parent;
+			} while (t != null && t != self);
+			return t == self;
+		}
+		UnityConsoleTextCalculations consoleCalc;
+		private void WatchMouse() {
+			PointerEventData pointerEvent = new PointerEventData(EventSystem.current);
+			pointerEvent.position = Mouse.current.position.ReadValue();
+			list.Clear();
+			EventSystem.current.RaycastAll(pointerEvent, list);
+			GameObject uiElement = list.Count > 0 ? list[0].gameObject : null;
+			if (uiElement && IsMyChild(uiElement.transform)) {
+				if (consoleCalc == null) {
+					consoleCalc = new UnityConsoleTextCalculations(_cout.inputField.textComponent);
+				} else {
+					consoleCalc.Update();
+				}
+				mouseOver = consoleCalc.GetCursorIndex(list[0].worldPosition);
+				if (debugShowMouseOverTile) {
+					consoleCalc.OutlineTile(mouseOver, Color.yellow);
+				}
 			}
 		}
-		public string debugtest;
-
+		
 		private void Application_logMessageReceived(string condition, string stackTrace, LogType type) {
 			Coord whereCursorStarted = State.Cursor.position2d;
 			switch (type) {
@@ -161,7 +140,6 @@ namespace NonStandard.Cli {
 			}
 			Coord whereCursorEnded = State.Cursor.position2d;
 			_cout.AddTagToTextSpan(whereCursorStarted, whereCursorEnded, stackTrace);
-
 		}
 
 		[System.Serializable] public class ColorSettings {
