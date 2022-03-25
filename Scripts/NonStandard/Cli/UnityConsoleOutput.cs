@@ -56,6 +56,7 @@ namespace NonStandard.Cli {
 		public TMP_InputField inputField;
 
 		public TMP_Text Text => inputField != null ? inputField.textComponent : _foreText;
+		public RectTransform TextRect => inputField != null ? inputField.textViewport : _foreText.GetComponent<RectTransform>();
 
 		private void CreateBackgroundTextArea() {
 			TMP_Text pTmp = Text;
@@ -107,7 +108,7 @@ namespace NonStandard.Cli {
 			//	unityConsole.cursorUi.cursorObject.GetComponent<Cli.UnityConsoleCursor>().ScaleToFontSize(FontSize);
 			//}
 			if (unityConsole.cursorUI != null) {
-				unityConsole.cursorUI.GetComponent<Cli.UnityConsoleCursor>().ScaleToFontSize(FontSize);
+				unityConsole.cursorUI.GetComponent<UnityConsoleCursor>().ScaleToFontSize(FontSize);
 			}
 			RefreshText();
 		}
@@ -116,9 +117,9 @@ namespace NonStandard.Cli {
 			CoordRect limit = Console.Window.Limit;
 			ConsoleBody OutputData = unityConsole.State.Output;
 			CalculateText(OutputData, limit, _foreTile, true, unityConsole.colorSettings.foregroundAlpha);
-			DisplayCalculations calc = null;
+			UnityConsoleCalculations.Text calc = null;
 			if (Console.Window.IsAutosizing && NeedsCalculation()) {
-				calc = new DisplayCalculations(this);
+				calc = new UnityConsoleCalculations.Text(this);
 			}
 			TransferToTMP(true, _foreTile, calc);
 			if (calc != null) {
@@ -185,7 +186,7 @@ namespace NonStandard.Cli {
 		public bool NeedsCalculation() {
 			return fontSizeCalculated != _foreText.fontSize || TextAreaSize() != sizeCalculated;
 		}
-		public void DoCalculation(DisplayCalculations calc) {
+		public void DoCalculation(UnityConsoleCalculations.Text calc) {
 			Vector2 ideal = calc.CalculateIdealSize();
 			Console.Window.viewRect.Size = new Coord((short)ideal.x, (short)ideal.y);
 			Console.Window.UpdatePosition();
@@ -196,7 +197,7 @@ namespace NonStandard.Cli {
 				sizeCalculated = TextAreaSize();
 			}
 		}
-		public void TransferToTMP(bool foreground, List<Tile> tiles, DisplayCalculations calc = null) {
+		public void TransferToTMP(bool foreground, List<Tile> tiles, UnityConsoleCalculations.Text calc = null) {
 			TMP_Text tmpText;
 			char[] letters = new char[tiles.Count];
 			for (int i = 0; i < letters.Length; ++i) { letters[i] = tiles[i].letter; }
@@ -265,50 +266,7 @@ namespace NonStandard.Cli {
 			if (colorChange) { tmpText.UpdateVertexData(TMP_VertexDataUpdateFlags.Colors32); }
 			if (vertChange) { tmpText.UpdateVertexData(TMP_VertexDataUpdateFlags.Vertices); }
 		}
-		public class DisplayCalculations {
-			public DisplayCalculations(Cli.UnityConsoleOutput console) {
-				rt = console.inputField != null ? console.inputField.textViewport : console._foreText.GetComponent<RectTransform>();
-			}
-			public RectTransform rt;
-			public Coord size = Coord.Zero;
-			public int currentLineWidth;
-			public Vector2 min, max;
-			public void CalculateVertices(Vector3[] verts) {
-				min = max = verts[0];
-				Vector3 v;
-				for (int i = 0; i < verts.Length; ++i) {
-					v = verts[i];
-					if (v.x < min.x) min.x = v.x;
-					if (v.y < min.y) min.y = v.y;
-					if (v.x > max.x) max.x = v.x;
-					if (v.y > max.y) max.y = v.y;
-				}
-			}
-			public void StartCalculatingText() {
-				currentLineWidth = 0;
-				size = Coord.Zero;
-			}
-			public void UpdateTextCalculation(char c) {
-				if (currentLineWidth == 0) { ++size.Y; }
-				switch (c) {
-					case '\0': break;
-					case '\n': currentLineWidth = 0; break;
-					default: if (++currentLineWidth > size.X) { size.X = currentLineWidth; } break;
-				}
-			}
-			public Vector2 CalculateIdealSize() {
-				Vector2 totSize = (max - min);
-				Rect rect = rt.rect;
-				Vector2 maxInArea = new Vector2(Coord.Max.X - 1, Coord.Max.Y - 1);
-				// only limit the size if there is not enough space
-				if (totSize.x > rect.width || totSize.y > rect.height) {
-					Vector2 glyphSize = new Vector2(totSize.x / size.X, totSize.y / size.Y);
-					maxInArea = new Vector2(rect.width / glyphSize.x, rect.height / glyphSize.y - 1);
-					//Show.Log(maxInArea + " <-- " + glyphSize + " chars: " + size + "   sized: " + totSize + "   / " + rt.rect.width + "," + rt.rect.height);
-				}
-				return maxInArea;
-			}
-		}
+
 		#endregion calculations
 
 		#region Settings

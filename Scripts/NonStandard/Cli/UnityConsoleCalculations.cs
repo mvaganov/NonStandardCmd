@@ -2,7 +2,7 @@ using UnityEngine;
 using NonStandard.Data;
 
 namespace NonStandard.Cli {
-	public class UnityConsoleTextCalculations {
+	public class UnityConsoleCalculations {
 		public TMPro.TMP_Text text;
 		public Vector3 windowPosition;
 		public Quaternion windowRotation;
@@ -14,7 +14,7 @@ namespace NonStandard.Cli {
 		public Vector3 windowLowerRight;
 		public Vector3 xhat;
 		public Vector3 yhat;
-		public UnityConsoleTextCalculations(TMPro.TMP_Text text) {
+		public UnityConsoleCalculations(TMPro.TMP_Text text) {
 			Refresh(text);
 		}
 		public bool NeedsRefresh() {
@@ -69,6 +69,53 @@ namespace NonStandard.Cli {
 					cursorWorldPos+worldTileWidth,
 				};
 			Lines.Make(lineName).Line(tileCorners, color, startSize: 1f / 64);
+		}
+
+		public class Text {
+			public Text(UnityConsoleOutput console) { rt = console.TextRect; }
+			public RectTransform rt;
+			public Coord textContentSize = Coord.Zero;
+			public int currentLineCharCount;
+			public Vector2 min, max;
+			public void CalculateVertices(Vector3[] verts) {
+				min = max = verts[0];
+				Vector3 v;
+				for (int i = 0; i < verts.Length; ++i) {
+					v = verts[i];
+					if (v.x < min.x) min.x = v.x;
+					if (v.y < min.y) min.y = v.y;
+					if (v.x > max.x) max.x = v.x;
+					if (v.y > max.y) max.y = v.y;
+				}
+			}
+			public void StartCalculatingText() {
+				currentLineCharCount = 0;
+				textContentSize = Coord.Zero;
+			}
+			public void UpdateTextCalculation(char c) {
+				if (currentLineCharCount == 0) { ++textContentSize.Y; }
+				switch (c) {
+					case '\0': break;
+					case '\n': currentLineCharCount = 0; break;
+					default:
+						if (++currentLineCharCount > textContentSize.X) {
+							textContentSize.X = currentLineCharCount;
+						}
+						break;
+				}
+			}
+			public Vector2 CalculateIdealSize() {
+				Vector2 totSize = (max - min);
+				Rect rect = rt.rect;
+				Vector2 maxInArea = new Vector2(Coord.Max.X - 1, Coord.Max.Y - 1);
+				// only limit the size if there is not enough space
+				if (totSize.x > rect.width || totSize.y > rect.height) {
+					Vector2 glyphSize = new Vector2(totSize.x / textContentSize.X, totSize.y / textContentSize.Y);
+					maxInArea = new Vector2(rect.width / glyphSize.x, rect.height / glyphSize.y - 1);
+					//Show.Log(maxInArea + " <-- " + glyphSize + " chars: " + size + "   sized: " + totSize + "   / " + rt.rect.width + "," + rt.rect.height);
+				}
+				return maxInArea;
+			}
 		}
 	}
 }

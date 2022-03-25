@@ -103,7 +103,7 @@ namespace NonStandard.Cli {
 			} while (t != null && t != self);
 			return t == self;
 		}
-		UnityConsoleTextCalculations consoleCalc;
+		UnityConsoleCalculations consoleCalc;
 		private void WatchMouse() {
 			PointerEventData pointerEvent = new PointerEventData(EventSystem.current);
 			pointerEvent.position = Mouse.current.position.ReadValue();
@@ -112,7 +112,7 @@ namespace NonStandard.Cli {
 			GameObject uiElement = list.Count > 0 ? list[0].gameObject : null;
 			if (uiElement && IsMyChild(uiElement.transform)) {
 				if (consoleCalc == null) {
-					consoleCalc = new UnityConsoleTextCalculations(_cout.inputField.textComponent);
+					consoleCalc = new UnityConsoleCalculations(_cout.inputField.textComponent);
 				} else {
 					consoleCalc.Update();
 				}
