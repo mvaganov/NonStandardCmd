@@ -107,6 +107,14 @@ namespace NonStandard.Cli {
 			}
 			textNeedsRefresh = true;
 		}
+
+		public void Clear() {
+			Output.Clear();
+			CursorPosition = Coord.Zero;
+			Window.viewRect.Position = Coord.Zero;
+			Window.UpdatePosition();
+		}
+
 		public void RefreshInputText() {
 			RefreshInput(_input);
 		}

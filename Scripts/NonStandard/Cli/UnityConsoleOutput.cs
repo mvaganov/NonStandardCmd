@@ -115,8 +115,9 @@ namespace NonStandard.Cli {
 		public CharSettings defaultEmptyCharacter = new CharSettings();
 
 		[System.Serializable] public class CharSettings {
+			public const char DefaultBackground = '\u2588';
 			public char Foreground = ' '; // normal space
-			public char Background = '\u2588'; // █
+			public char Background = DefaultBackground; // █
 		}
 		#endregion Settings
 

@@ -10,12 +10,12 @@ namespace NonStandard.Cli {
 	public partial class UnityConsoleOutput {
 		private Vector2 sizeCalculated = -Vector2.one;
 		private float fontSizeCalculated = -1;
-
+		private const char TMProTextOutputTerminator = '\u200B';
+		public UnityConsoleCalculations.Text calc = null;
 		public void RefreshText() {
 			CoordRect limit = console.Window.Limit;
 			ConsoleBody OutputData = unityConsole.State.Output;
 			CalculateText(OutputData, limit, _foreTile, true, unityConsole.colorSettings.foregroundAlpha, console.Cursor);
-			UnityConsoleCalculations.Text calc = null;
 			if (console.Window.IsAutosizing && NeedsCalculation()) {
 				calc = new UnityConsoleCalculations.Text(this);
 			}
@@ -99,76 +99,81 @@ namespace NonStandard.Cli {
 			}
 		}
 
+		/// <summary>
+		/// transfers the given tiles to the Text Mesh Pro text output.
+		/// </summary>
+		/// <param name="foreground">it true, use the inputField if available. otherwise, use the background</param>
+		/// <param name="tiles"></param>
+		/// <param name="foundCursorVerts"></param>
+		/// <param name="calc"></param>
 		public void TransferToTMP(bool foreground, List<Tile> tiles, UnityConsoleCalculations.Text calc = null) {
 			TMP_Text tmpText;
 			char[] letters = new char[tiles.Count];
 			for (int i = 0; i < letters.Length; ++i) { letters[i] = tiles[i].letter; }
 			string text = new string(letters);
 			if (foreground) {
-				if (inputField) {
-					inputField.text = text;
-					inputField.ForceLabelUpdate();
-					tmpText = inputField.textComponent;
-				} else {
-					tmpText = this._foreText;
-					tmpText.text = text;
-					tmpText.ForceMeshUpdate();
-				}
+				tmpText = inputField ? SetTmpText(inputField, text) : SetTmpText(_foreText, text);
 			} else {
-				tmpText = _backText;
-				tmpText.text = text;
-				tmpText.ForceMeshUpdate();
+				tmpText = SetTmpText(_backText, text);
 			}
 			TMP_CharacterInfo[] chars = tmpText.textInfo.characterInfo;
 			Vector3 normal = -transform.forward;
-			Color32 color;
-			float height;
 			bool vertChange = false, colorChange = false;
 
-			//StringBuilder sb = new StringBuilder();
+			// TMPro may have multiple meshes per char, in layers. each layer is in meshInfo
 			for (int m = 0; m < tmpText.textInfo.meshInfo.Length; ++m) {
-				Color32[] vertColors = tmpText.textInfo.meshInfo[m].colors32;
-				Vector3[] verts = tmpText.textInfo.meshInfo[m].vertices;
-				calc?.CalculateVertices(verts);
-				calc?.StartCalculatingText();
-				for (int i = 0; i < chars.Length; ++i) {
-					TMP_CharacterInfo cinfo = chars[i];
-					// stop at the zero-width breaking space
-					if (cinfo.character == '\u200B') break;
-					calc?.UpdateTextCalculation(cinfo.character);
-					//if (cinfo.isVisible) sb.Append(cinfo.character);
-					//else sb.Append("(" + ((int)cinfo.character) + ")");
-					if (!cinfo.isVisible) continue;
-					int vertexIndex = cinfo.vertexIndex;
-					if (i == console.Cursor.indexInConsole) {
-						if (vertexIndex >= verts.Length) {
-							Debug.LogWarning("weirdness happening. " + tmpText.text);
-						} else {
-							unityConsole.cursorUI.SetCursorPositionPoints(verts, vertexIndex);
-						}
-					}
-					if (vertexIndex < vertColors.Length && i < tiles.Count
-					&& !vertColors[vertexIndex].EqualRgba(color = tiles[i].color)) {
-						colorChange = true;
-						vertColors[vertexIndex + 0] = color;
-						vertColors[vertexIndex + 1] = color;
-						vertColors[vertexIndex + 2] = color;
-						vertColors[vertexIndex + 3] = color;
-					}
-					if (vertexIndex < vertColors.Length && i < tiles.Count && (height = tiles[i].height) != 0) {
-						vertChange = true;
-						Vector3 h = height * normal;
-						verts[vertexIndex + 0] = verts[vertexIndex + 0] + h;
-						verts[vertexIndex + 1] = verts[vertexIndex + 1] + h;
-						verts[vertexIndex + 2] = verts[vertexIndex + 2] + h;
-						verts[vertexIndex + 3] = verts[vertexIndex + 3] + h;
-					}
-				}
+				UpdateTmpMesh(tiles, tmpText.textInfo.meshInfo[m], chars, normal, ref colorChange, ref vertChange, calc);
 			}
-			//Show.Log(sb);
 			if (colorChange) { tmpText.UpdateVertexData(TMP_VertexDataUpdateFlags.Colors32); }
 			if (vertChange) { tmpText.UpdateVertexData(TMP_VertexDataUpdateFlags.Vertices); }
 		}
 
+		private void UpdateTmpMesh(List<Tile> tiles, TMP_MeshInfo meshInfo, TMP_CharacterInfo[] chars, Vector3 normal, 
+		ref bool colorChange, ref bool vertChange, UnityConsoleCalculations.Text calc) {
+			Color32[] vertColors = meshInfo.colors32;
+			Vector3[] verts = meshInfo.vertices;
+			calc?.CalculateTextBoundaries(verts);
+			calc?.StartCalculatingText();
+			for (int i = 0; i < chars.Length; ++i) {
+				TMP_CharacterInfo cinfo = chars[i];
+				if (cinfo.character == TMProTextOutputTerminator) break;
+				calc?.UpdateTextCalculation(cinfo.character);
+				if (!cinfo.isVisible) continue;
+				int vertexIndex = cinfo.vertexIndex;
+				if (i >= tiles.Count) { continue; }
+				colorChange |= SetTmpTextQuadColor(vertexIndex, vertColors, tiles[i].color);
+				vertChange |= SetTmpTextQuadHeight(vertexIndex, verts, normal, tiles[i].height);
+			}
+		}
+		private TMP_Text SetTmpText(TMP_InputField inputField, string text) {
+			inputField.text = text;
+			inputField.ForceLabelUpdate();
+			return inputField.textComponent;
+		}
+
+		private TMP_Text SetTmpText(TMP_Text tmp_text, string text) {
+			tmp_text.text = text;
+			tmp_text.ForceMeshUpdate();
+			return tmp_text;
+		}
+
+		private bool SetTmpTextQuadColor(int vertexIndex, Color32[] vertColors, Color color) {
+			if (vertexIndex >= vertColors.Length || vertColors[vertexIndex].EqualRgba(color)) { return false; }
+			vertColors[vertexIndex + 0] = color;
+			vertColors[vertexIndex + 1] = color;
+			vertColors[vertexIndex + 2] = color;
+			vertColors[vertexIndex + 3] = color;
+			return true;
+		}
+
+		private bool SetTmpTextQuadHeight(int vertexIndex, Vector3[] verts, Vector3 normal, float height) {
+			if (height == 0) { return false; }
+			Vector3 h = height * normal;
+			verts[vertexIndex + 0] = verts[vertexIndex + 0] + h;
+			verts[vertexIndex + 1] = verts[vertexIndex + 1] + h;
+			verts[vertexIndex + 2] = verts[vertexIndex + 2] + h;
+			verts[vertexIndex + 3] = verts[vertexIndex + 3] + h;
+			return true;
+		}
 	}
 }

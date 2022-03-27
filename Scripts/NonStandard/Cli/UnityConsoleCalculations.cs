@@ -14,6 +14,9 @@ namespace NonStandard.Cli {
 		public Vector3 windowLowerRight;
 		public Vector3 xhat;
 		public Vector3 yhat;
+		public Vector3 worldTileWidth;
+		public Vector3 worldTileHeight;
+		public float screenTileWidth, screenTileHeight, worldScreenTtileDescent;
 		public UnityConsoleCalculations(TMPro.TMP_Text text) {
 			Refresh(text);
 		}
@@ -30,7 +33,7 @@ namespace NonStandard.Cli {
 			windowPosition = textT.position;
 			windowRotation = textT.rotation;
 			windowScale = textT.lossyScale;
-			tileSize = text.GetPreferredValues("#");
+			tileSize = CalculateTileSize();
 			RectTransform rt = text.GetComponent<RectTransform>();
 			Vector3[] corners = new Vector3[4];
 			rt.GetWorldCorners(corners);
@@ -43,7 +46,22 @@ namespace NonStandard.Cli {
 			Vector2 worldSize = new Vector2(widthDelta.magnitude, heightDelta.magnitude);
 			xhat = widthDelta / worldSize.x;
 			yhat = heightDelta / worldSize.y;
+			screenTileWidth = tileSize.x * windowScale.x;
+			screenTileHeight = tileSize.y * windowScale.y;
+			worldTileWidth = xhat * screenTileWidth;
+			worldTileHeight = yhat * screenTileHeight;
 		}
+
+		private Vector2 CalculateTileSize() {
+			string fullChar = UnityConsoleOutput.CharSettings.DefaultBackground.ToString();
+			Vector2 oneLine = text.GetPreferredValues(fullChar);
+			Vector2 twoLines = text.GetPreferredValues(fullChar + "\n" + fullChar);
+			Vector2 tileSize = oneLine;
+			worldScreenTtileDescent = (twoLines.y - (oneLine.y * 2)) * windowScale.y;
+			tileSize.y = twoLines.y - oneLine.y; // make sure the tileSize height includes the line padding.
+			return tileSize;
+		}
+
 		public Coord GetCursorIndex(Vector3 worldPosition) {
 			Vector3 delta = worldPosition - windowUpperLeft;
 			Vector2 panelPosWorldScale = new Vector2(Vector3.Dot(xhat, delta), Vector3.Dot(yhat, delta));
@@ -55,20 +73,29 @@ namespace NonStandard.Cli {
 			return new Coord((int)clippedPosition.x, (int)clippedPosition.y);
 		}
 		public void OutlineTile(Coord tilePosition, Color color, string lineName = "tile") {
-			Vector2 cursorPixelPos = new Vector2(tilePosition.x * tileSize.x, tilePosition.y * tileSize.y);
-			Vector2 cursorRealPos = new Vector2(cursorPixelPos.x * windowScale.x, cursorPixelPos.y * windowScale.y);
-			Vector3 cursorWorldPos = xhat * cursorRealPos.x + yhat * cursorRealPos.y + windowUpperLeft;
-			Vector3 worldTileWidth = xhat * tileSize.x * windowScale.x;
-			Vector3 worldTileHeight = yhat * tileSize.y * windowScale.y;
-			Vector3[] tileCorners = new Vector3[]{
-					cursorWorldPos,
-					cursorWorldPos+worldTileWidth,
-					cursorWorldPos+worldTileWidth+worldTileHeight,
-					cursorWorldPos+worldTileHeight,
-					cursorWorldPos,
-					cursorWorldPos+worldTileWidth,
-				};
+			Vector3[] tileCorners = new Vector3[6];
+			GetTileCorners(tilePosition, tileCorners);
+			tileCorners[4] = tileCorners[0];
+			tileCorners[5] = tileCorners[1];
 			Lines.Make(lineName).Line(tileCorners, color, startSize: 1f / 64);
+		}
+
+		public void GetTileCorners(Coord tilePosition, Vector3[] out_corners) {
+			Vector3 cursorWorldPos = GetTileCornerWorldPosition(tilePosition);
+			out_corners[0] = cursorWorldPos;
+			out_corners[1] = cursorWorldPos + worldTileWidth;
+			out_corners[2] = cursorWorldPos + worldTileWidth + worldTileHeight;
+			out_corners[3] = cursorWorldPos                  + worldTileHeight;
+		}
+
+		public Vector3 GetTileCornerWorldPosition(Coord tilePosition) {
+			Vector2 cursorScreenPos = new Vector2(tilePosition.x * screenTileWidth, tilePosition.y * screenTileHeight);
+			cursorScreenPos.y -= worldScreenTtileDescent;
+			return xhat * cursorScreenPos.x + yhat * cursorScreenPos.y + windowUpperLeft;
+		}
+
+		public Vector3 GetTileCenter(Coord tilePosition) {
+			return GetTileCornerWorldPosition(tilePosition) + (worldTileHeight + worldTileWidth) / 2;
 		}
 
 		public class Text {
@@ -77,7 +104,7 @@ namespace NonStandard.Cli {
 			public Coord textContentSize = Coord.Zero;
 			public int currentLineCharCount;
 			public Vector2 min, max;
-			public void CalculateVertices(Vector3[] verts) {
+			public void CalculateTextBoundaries(Vector3[] verts) {
 				min = max = verts[0];
 				Vector3 v;
 				for (int i = 0; i < verts.Length; ++i) {

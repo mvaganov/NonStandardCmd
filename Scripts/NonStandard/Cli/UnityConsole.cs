@@ -21,6 +21,7 @@ namespace NonStandard.Cli {
 	public class UnityConsole : MonoBehaviour {
 		public const int MaxColorPaletteSize = 0xff;
 		public LogOptions logging;
+		public UnityConsoleCalculations calc;
 		private UnityConsoleOutput _cout;
 		public ConsoleState State;
 		public ColorSettings colorSettings = new ColorSettings();
@@ -76,9 +77,11 @@ namespace NonStandard.Cli {
 #endif
 			Show.Log("Show.Log test "+logging);
 			Debug.Log("Debug.Log test "+logging);
+			UpdateConsoleCalculations();
 		}
 
 		private void Update() {
+			UpdateConsoleCalculations();
 			if (watchMouse) {
 				WatchMouse();
 			}
@@ -103,7 +106,13 @@ namespace NonStandard.Cli {
 			} while (t != null && t != self);
 			return t == self;
 		}
-		UnityConsoleCalculations consoleCalc;
+		private void UpdateConsoleCalculations() {
+			if (calc == null) {
+				calc = new UnityConsoleCalculations(_cout.inputField.textComponent);
+			} else {
+				calc.Update();
+			}
+		}
 		private void WatchMouse() {
 			PointerEventData pointerEvent = new PointerEventData(EventSystem.current);
 			pointerEvent.position = Mouse.current.position.ReadValue();
@@ -111,14 +120,9 @@ namespace NonStandard.Cli {
 			EventSystem.current.RaycastAll(pointerEvent, list);
 			GameObject uiElement = list.Count > 0 ? list[0].gameObject : null;
 			if (uiElement && IsMyChild(uiElement.transform)) {
-				if (consoleCalc == null) {
-					consoleCalc = new UnityConsoleCalculations(_cout.inputField.textComponent);
-				} else {
-					consoleCalc.Update();
-				}
-				mouseOver = consoleCalc.GetCursorIndex(list[0].worldPosition);
+				mouseOver = calc.GetCursorIndex(list[0].worldPosition);
 				if (debugShowMouseOverTile) {
-					consoleCalc.OutlineTile(mouseOver, Color.yellow);
+					calc.OutlineTile(mouseOver, Color.cyan);
 				}
 			}
 		}
@@ -202,5 +206,6 @@ namespace NonStandard.Cli {
 		public void Write(object o) => State.Write(o);
 		public void WriteLine(string text) => Write(text + "\n");
 		public void WriteLine(string text, byte color) => State.Write(text + "\n", color);
+		public void Clear() { State.Clear(); }
 	}
 }
