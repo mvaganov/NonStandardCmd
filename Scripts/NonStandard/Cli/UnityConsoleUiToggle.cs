@@ -137,7 +137,7 @@ namespace NonStandard.Cli {
 		private IEnumerator RefreshConsoleWindowAndText() {
 			yield return null;
 			UnityConsoleOutput console = GetComponent<UnityConsoleOutput>();
-			console.Console.Window.ResetWindowSize();
+			console.console.Window.ResetWindowSize();
 			console.RefreshText();
 		}
 

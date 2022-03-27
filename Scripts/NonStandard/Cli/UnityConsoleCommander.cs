@@ -13,16 +13,16 @@ namespace NonStandard.Cli {
 		public bool globalCommander = true;
 		public UnityEvent_string WhenCommandRuns;
 
-		private Commander _commander; //= new Commander();
+		private Commander _commander;
 		public Commander CommanderInstance => _commander != null ? _commander : globalCommander ? _commander = Commander.Instance : null;
 		public void DoCommand(string text) {
 			UnityConsoleOutput console = GetComponent<UnityConsoleOutput>();
 			CommanderInstance.ParseCommand(new Commander.Instruction(text, this), console.Write, out Tokenizer t);
 			if (t?.errors?.Count > 0) {
-				console.Console.PushForeColor(ConsoleColor.Red);
+				console.console.PushForeColor(ConsoleColor.Red);
 				console.WriteLine(t.GetErrorString());
 				Show.Log(t.GetErrorString());
-				console.Console.PopForeColor();
+				console.console.PopForeColor();
 			}
 			WhenCommandRuns?.Invoke(text);
 		}
