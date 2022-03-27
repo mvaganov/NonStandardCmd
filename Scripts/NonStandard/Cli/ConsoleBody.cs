@@ -114,7 +114,7 @@ namespace NonStandard.Cli {
 				char c = text[i];
 				bool printCharacter = false;
 				switch (c) {
-					case Col.ColorSequenceDelim: ProcessColorSequenceDelimiter(text, i); continue;
+					case Col.ColorSequenceDelim: ProcessColorSequenceDelimiter(text, ref i); continue;
 					case '\b': ConsoleBackspace(ref writeCursor); break;
 					case '\n': ConsoleNewline(ref writeCursor); break;
 					default: printCharacter = true; break;
@@ -140,13 +140,9 @@ namespace NonStandard.Cli {
 				char c = text[i];
 				bool printCharacter = false;
 				switch (c) {
-					case Col.ColorSequenceDelim: ProcessColorSequenceDelimiter(text, i); continue;
+					case Col.ColorSequenceDelim: ProcessColorSequenceDelimiter(text, ref i); continue;
 					case '\b': diff.InsertBackspace(this, ref writeCursor, ref inputIndex); break;
-					case '\n':
-						// write the newline into the input field
-						diff.Insert(ref inputIndex, currentDefaultTile.wLetter('\n'), this, ref writeCursor);
-						// show it in the command line? nah.
-						//printCharacter = true;
+					case '\n': diff.Insert(ref inputIndex, currentDefaultTile.wLetter('\n'), this, ref writeCursor);
 						break;
 					default: printCharacter = true; break;
 				}
@@ -162,7 +158,7 @@ namespace NonStandard.Cli {
 			size.row = (short)Math.Max(lines.Count, writeCursor.row + 1);
 		}
 
-		private void ProcessColorSequenceDelimiter(string text, int i) {
+		private void ProcessColorSequenceDelimiter(string text, ref int i) {
 			ParseColorSequenceDelimeter(text, ref i, out byte f, out byte b);
 			currentDefaultTile.fore = (f == Col.DefaultColorIndex) ? defaultColors.fore : f;
 			currentDefaultTile.back = (b == Col.DefaultColorIndex) ? defaultColors.back : b;

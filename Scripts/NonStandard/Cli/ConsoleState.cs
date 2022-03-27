@@ -113,6 +113,7 @@ namespace NonStandard.Cli {
 			CursorPosition = Coord.Zero;
 			Window.viewRect.Position = Coord.Zero;
 			Window.UpdatePosition();
+			RestartInput();
 		}
 
 		public void RefreshInputText() {

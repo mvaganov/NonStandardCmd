@@ -12,12 +12,13 @@ namespace NonStandard.Cli {
 		[Tooltip("access Commander singleton, showing all scriptable commands")]
 		public bool globalCommander = true;
 		public UnityEvent_string WhenCommandRuns;
+		private UnityConsoleOutput console;
 
 		private Commander _commander;
 		public Commander CommanderInstance => _commander != null ? _commander : globalCommander ? _commander = Commander.Instance : null;
 		public void DoCommand(string text) {
-			UnityConsoleOutput console = GetComponent<UnityConsoleOutput>();
-			CommanderInstance.ParseCommand(new Commander.Instruction(text, this), console.Write, out Tokenizer t);
+			console = GetComponent<UnityConsoleOutput>();
+			CommanderInstance.ParseCommand(new Commander.Instruction(text, this), WriteOutput, out Tokenizer t);
 			if (t?.errors?.Count > 0) {
 				console.console.PushForeColor(ConsoleColor.Red);
 				console.WriteLine(t.GetErrorString());
@@ -25,6 +26,10 @@ namespace NonStandard.Cli {
 				console.console.PopForeColor();
 			}
 			WhenCommandRuns?.Invoke(text);
+		}
+		public void WriteOutput(string text) {
+			console.Write(text);
+			console.console.RestartInput();
 		}
 		private void Start() {
 			if (!string.IsNullOrEmpty(firstCommandsToExecute)) {
@@ -51,13 +56,10 @@ namespace NonStandard.Cli {
 				sb.Append(result.ToString());
 			}
 			console.WriteLine(sb.ToString());
+			console.console.RestartInput();
 		}
 		public void Cmd_Clear(Command.Exec e) {
-			UnityConsole console = GetComponent<UnityConsole>();
-			console.State.Output.Clear();
-			console.State.CursorPosition = Coord.Zero;
-			console.State.Window.viewRect.Position = Coord.Zero;
-			console.State.Window.UpdatePosition();
+			console.console.Clear();
 		}
 #if UNITY_EDITOR
 		public void Reset() {
