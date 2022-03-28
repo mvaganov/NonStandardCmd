@@ -35,8 +35,16 @@ namespace NonStandard.Cli {
 		public void Write(char c) => console.Write(c);
 		public void Write(object o) => console.Write(o);
 		public void Write(string text) => console.Write(text);
+		public void Write(string text, byte fcolor) => console.Write(text, fcolor);
 		public void WriteLine(string text) => console.Write(text + "\n");
-
+		public void RestartInput() {
+			console.RestartInput();
+			if (inputField != null) {
+				int inputIndex = console.Cursor.indexInInput;
+				inputField.selectionFocusPosition = inputIndex;
+				inputField.selectionAnchorPosition = inputIndex;
+			}
+		}
 		public Vector2 TextAreaSize() {
 			return (inputField != null ? inputField.textViewport : _foreText.GetComponent<RectTransform>()).rect.size;
 		}

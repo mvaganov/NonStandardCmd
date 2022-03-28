@@ -2,7 +2,6 @@
 using NonStandard.Data;
 using System;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace NonStandard.Cli {
 	/// <summary>
@@ -168,7 +167,7 @@ namespace NonStandard.Cli {
 			public enum WindowSizing { Unconstrained, UseStaticViewRectangle, AutoCalculateViewRectangle }
 			internal ConsoleBody body;
 			public static readonly CoordRect Maximum = new CoordRect(Coord.Zero, Coord.Max);
-			[Tooltip("only render characters contained in the render window")]
+			/// [Tooltip("only render characters contained in the render window")]
 			public WindowSizing windowSizing = WindowSizing.AutoCalculateViewRectangle;
 			public CoordRect viewRect = Maximum;
 			public enum FollowBehavior { No, Yes }

@@ -51,7 +51,10 @@ namespace NonStandard.Commands {
 			if (command != null) {
 				tokenizer = command.Tokenize(trimmed);
 				//Show.Log(tokenizer);
-				if (tokenizer.HasError()) { return; }
+				if (tokenizer.HasError()) {
+					Show.Error("parsed '" + trimmed + "': " + tokenizer.GetErrorString());
+					return;
+				}
 				command.handler.Invoke(new Command.Exec(command, tokenizer, instruction.source, print));
 			} else {
 				print.Invoke("unknown command \'" + firstWord + "\'\n");

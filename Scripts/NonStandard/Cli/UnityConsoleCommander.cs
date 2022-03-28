@@ -47,7 +47,12 @@ namespace NonStandard.Cli {
 		}
 		public void Cmd_Help(Command.Exec e) { CommanderInstance.Cmd_Help_Handler(e); }
 		public void Cmd_Echo(Command.Exec e) {
-			UnityConsoleOutput console = GetComponent<UnityConsoleOutput>();
+			Debug.Log(e.tok.DebugPrint());
+			if (e.tok.HasError()) {
+				UnityConsoleInput cin = GetComponent<UnityConsoleInput>();
+				console.Write("errors:");
+				console.Write(e.tok.GetErrorString(), (byte)cin.colors.codeInvalidInput);
+			}
 			StringBuilder sb = new StringBuilder();
 			for (int i = 1; i < e.tok.Tokens.Count; ++i) {
 				object result = e.tok.Tokens[i].Resolve(e.tok, e.src);
