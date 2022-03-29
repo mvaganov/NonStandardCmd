@@ -12,24 +12,24 @@ namespace NonStandard.Cli {
 		[Tooltip("access Commander singleton, showing all scriptable commands")]
 		public bool globalCommander = true;
 		public UnityEvent_string WhenCommandRuns;
-		private UnityConsoleOutput console;
+		private UnityConsole console;
 
 		private Commander _commander;
 		public Commander CommanderInstance => _commander != null ? _commander : globalCommander ? _commander = Commander.Instance : null;
 		public void DoCommand(string text) {
-			console = GetComponent<UnityConsoleOutput>();
+			console = GetComponent<UnityConsole>();
 			CommanderInstance.ParseCommand(new Commander.Instruction(text, this), WriteOutput, out Tokenizer t);
 			if (t?.errors?.Count > 0) {
-				console.console.PushForeColor(ConsoleColor.Red);
+				console.PushForeColor(ConsoleColor.Red);
 				console.WriteLine(t.GetErrorString());
 				Show.Log(t.GetErrorString());
-				console.console.PopForeColor();
+				console.PopForeColor();
 			}
 			WhenCommandRuns?.Invoke(text);
 		}
 		public void WriteOutput(string text) {
 			console.Write(text);
-			console.console.RestartInput();
+			console.RestartInput();
 		}
 		private void Start() {
 			if (!string.IsNullOrEmpty(firstCommandsToExecute)) {
@@ -61,10 +61,10 @@ namespace NonStandard.Cli {
 				sb.Append(result.ToString());
 			}
 			console.WriteLine(sb.ToString());
-			console.console.RestartInput();
+			console.RestartInput();
 		}
 		public void Cmd_Clear(Command.Exec e) {
-			console.console.Clear();
+			console.Clear();
 		}
 #if UNITY_EDITOR
 		public void Reset() {

@@ -96,7 +96,9 @@ namespace NonStandard.Cli {
 			public CommandEntry(string name, string description, string functionName, object functionTarget,
 				ArgumentEntry[] arguments = null, Command.DevelopmentState devState = Command.DevelopmentState.Normal) {
 				this.name = name; this.description = description;
-				EventBind.On(commandExecution, functionTarget, functionName);
+				//EventBind.On(commandExecution, functionTarget, functionName);
+				EventBind eventBind = new EventBind(functionTarget, functionName);
+				eventBind.Bind(commandExecution);
 				this.arguments = arguments; this.devState = devState;
 			}
 			public Command GenerateProperCommand() {

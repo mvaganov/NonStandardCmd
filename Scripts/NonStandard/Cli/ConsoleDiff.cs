@@ -10,6 +10,10 @@ namespace NonStandard.Cli {
 		public CoordRect inputArea = CoordRect.Invalid;
 
 		public Coord StartPosition = Coord.NegativeOne;
+
+		public int Count => changes.Count;
+		public bool IsBoundToSpecificArea => inputArea != CoordRect.Invalid;
+
 		public bool IsAtOrBeforeStartingPoint(Coord writeCursor) {
 			return writeCursor.row < StartPosition.row ||
 				writeCursor.row == StartPosition.row && writeCursor.col <= StartPosition.col;
@@ -211,8 +215,18 @@ namespace NonStandard.Cli {
 			}
 			return tilesRemainingInRow;
 		}
+		public void MoveAllChanges(Coord delta) {
+			for (int i = 0; i < changes.Count; ++i) {
+				ConsoleDiffUnit diffUnit = changes[i];
+				diffUnit.coord += delta;
+				changes[i] = diffUnit;
+			}
+			StartPosition += delta;
+		}
 		public void WriteNext(ConsoleBody body, int startIndex, int count) { Write(body, true, startIndex, count); }
 		public void WritePrev(ConsoleBody body, int startIndex, int count) { Write(body, false, startIndex, count); }
+		public void WriteNext(ConsoleBody body) => WriteNext(body, 0, Count);
+		public void WritePrev(ConsoleBody body) => WritePrev(body, 0, Count);
 
 		private void Write(ConsoleBody body, bool next, int start, int count) {
 			int end = start + count;

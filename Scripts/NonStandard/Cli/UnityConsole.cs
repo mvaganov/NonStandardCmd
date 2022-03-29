@@ -30,6 +30,7 @@ namespace NonStandard.Cli {
 		public bool debugShowMouseOverTile = true;
 		public Coord mouseOver;
 		public UnityConsoleOutput cout => _cout ? _cout : _cout = GetComponent<UnityConsoleOutput>();
+		// TODO if Input is not empty, and new output is being written, un-write the Input, then write the new output, then re-write the Input at the new cursor.
 		public ConsoleDiff Input { get => State.Input; set => State.Input = value; }
 		public bool CursorVisible {
 			get => cursorUI.gameObject.activeSelf;
@@ -46,6 +47,9 @@ namespace NonStandard.Cli {
 #endif
 		}
 		public void RefreshCursorPosition() => cursorUI.RefreshCursorPosition(this);
+		public void PushForeColor(ConsoleColor color) => State.PushForeColor(color);
+		public void PushForeColor(byte color) => State.PushForeColor(color);
+		public void PopForeColor() => State.PopForeColor();
 
 		private void Reset() {
 			UserInput ui = GetComponent<UserInput>();
@@ -201,10 +205,27 @@ namespace NonStandard.Cli {
 		private void Log(object message) => WriteLine(message.ToString());
 		private void LogError(object message) => WriteLine(message.ToString());
 		private void LogWarning(object message) => WriteLine(message.ToString());
-		public void Write(char c) => State.Write(c);
-		public void Write(string text) => State.Write(text);
-		public void Write(object o) => State.Write(o);
+		public void Write(char c) => Write(c.ToString());
+		public void Write(object o) => Write(o.ToString());
 		public void WriteLine(string text) => Write(text + "\n");
+		public void Write(string text) => Write(text, -1);
+		public void Write(string text, int color) {
+			Coord originalStartPosition = Input.StartPosition;
+			// un-write user input
+			bool inputShouldFollowCursor = !Input.IsBoundToSpecificArea;
+			if (inputShouldFollowCursor && Input.Count > 0) {
+				Input.WritePrev(State.Output);
+			}
+			if (color >= 0) { PushForeColor((byte)color); }
+			_cout.Write(text);
+			if (color >= 0) { PopForeColor(); }
+			// re-write user input in a new spot
+			if (originalStartPosition != Coord.NegativeOne && inputShouldFollowCursor) {
+				Coord delta = State.Cursor.position2d - originalStartPosition;
+				Input.MoveAllChanges(delta);
+				Input.WriteNext(State.Output);
+			}
+		}
 		public void WriteLine(string text, byte color) => State.Write(text + "\n", color);
 		public void Clear() { State.Clear(); }
 	}

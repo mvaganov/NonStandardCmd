@@ -71,7 +71,6 @@ namespace NonStandard.Cli {
 
 		private void Start() {
 			colors.ApplyColorsTo(_console);
-			_cout.Write("testing");
 		}
 
 		protected override void Update() {
@@ -184,7 +183,7 @@ namespace NonStandard.Cli {
 			_console.Input = temp;
 			string input = LastInputText;
 			_console.Input.Clear();
-			_cout.Write("\n");
+			_console.Write("\n");
 			_console.RestartInput();
 			Debug.Log("[" + input + "]");
 			if (callbacks.enable) {

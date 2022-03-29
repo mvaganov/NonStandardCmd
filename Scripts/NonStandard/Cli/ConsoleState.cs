@@ -65,10 +65,6 @@ namespace NonStandard.Cli {
 			_output.SetAt(position, tile);
 		}
 
-		public void Write(char c) { Write(c.ToString()); }
-
-		public void Write(object o) { Write(o.ToString()); }
-
 		public void WriteInput(string inputText) {
 			Write(inputText, _input, ref Cursor.indexInInput);
 		}
@@ -127,7 +123,6 @@ namespace NonStandard.Cli {
 				_output.PrintTile(consoleDiffUnit.next, ref cursor);
 			}
 		}
-		public void WriteLine(string text) { Write(text + "\n"); }
 
 		public void RefreshCursorValid() {
 			if (CursorPosition.col < 0) {
