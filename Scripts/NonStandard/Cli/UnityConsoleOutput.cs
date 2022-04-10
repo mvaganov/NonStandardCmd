@@ -149,6 +149,7 @@ namespace NonStandard.Cli {
 		public Dictionary<short, TextSpan> tags = new Dictionary<short, TextSpan>();
 		private short nextFreeTag = 0;
 		public List<TextSpan> _textSpans = new List<TextSpan>();
+		private List<TextSpan> _found = new List<TextSpan>();
 
 		public short AddTagToTextSpan(Coord start, Coord end, object tag) {
 			// create a text span with the stack trace as metadata to that span
@@ -161,8 +162,9 @@ namespace NonStandard.Cli {
 		}
 
 		public List<TextSpan> GetTag(Coord coord) {
-			List<TextSpan> found = TextSpan.GetSpans(_textSpans, coord);
-			return found;
+			_found.Clear();
+			TextSpan.GetSpans(_textSpans, coord, _found);
+			return _found;
 		}
 
 		#endregion Tags

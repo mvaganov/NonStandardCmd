@@ -60,7 +60,7 @@ namespace NonStandard.Cli {
 				if (!(result is string)) { result = result.StringifySmall(); }
 				sb.Append(result.ToString());
 			}
-			console.WriteLine(sb.ToString());
+			console.Log(sb.ToString());
 			console.RestartInput();
 		}
 		public void Cmd_Clear(Command.Exec e) {

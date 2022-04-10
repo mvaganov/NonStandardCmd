@@ -8,6 +8,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using System.Text;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -102,15 +103,7 @@ namespace NonStandard.Cli {
 		}
 
 		//public GraphicRaycaster canvasRaycaster;
-		private List<RaycastResult> list = new List<RaycastResult>();
 
-		private bool IsMyChild(Transform t) {
-			Transform self = transform;
-			do {
-				t = t.parent;
-			} while (t != null && t != self);
-			return t == self;
-		}
 		private void UpdateConsoleCalculations() {
 			if (calc == null) {
 				calc = new UnityConsoleCalculations(_cout.inputField.textComponent);
@@ -118,33 +111,55 @@ namespace NonStandard.Cli {
 				calc.Update();
 			}
 		}
+		private List<RaycastResult> _raycastResultList = new List<RaycastResult>();
 		private void WatchMouse() {
+			UnityConsoleTooltip tooltip = GetComponent<UnityConsoleTooltip>();
+			if (tooltip == null) return;
 			PointerEventData pointerEvent = new PointerEventData(EventSystem.current);
 			pointerEvent.position = Mouse.current.position.ReadValue();
-			list.Clear();
-			EventSystem.current.RaycastAll(pointerEvent, list);
-			GameObject uiElement = list.Count > 0 ? list[0].gameObject : null;
+			_raycastResultList.Clear();
+			EventSystem.current.RaycastAll(pointerEvent, _raycastResultList);
+			GameObject uiElement = _raycastResultList.Count > 0 ? _raycastResultList[0].gameObject : null;
 			if (uiElement && IsMyChild(uiElement.transform)) {
-				mouseOver = calc.GetCursorIndex(list[0].worldPosition);
+				Vector3 worldPos = _raycastResultList[0].worldPosition;
+				mouseOver = calc.GetCursorIndex(worldPos);
 				if (debugShowMouseOverTile) {
 					calc.OutlineTile(mouseOver, Color.cyan);
 				}
+				List<TextSpan> spans = cout.GetTag(mouseOver);
+				string text = spans.Count == 1 ? spans[0].tag.ToString() : null;
+				if (spans.Count > 1) {
+					StringBuilder sb = new StringBuilder();
+					for (int i = 0; i < spans.Count; ++i) {
+						if (i > 0) { sb.Append("\n"); }
+						sb.Append(spans[i]);
+					}
+					text = sb.ToString();
+				}
+				tooltip.Tooltip(worldPos, text, 0);
 			}
 		}
-		
-		private void Application_logMessageReceived(string condition, string stackTrace, LogType type) {
+		private bool IsMyChild(Transform t) {
+			Transform self = transform;
+			do {
+				t = t.parent;
+			} while (t != null && t != self);
+			return t == self;
+		}
+
+		private void Application_logMessageReceived(string text, string stackTrace, LogType type) {
 			Coord whereCursorStarted = State.Cursor.position2d;
 			switch (type) {
 				case LogType.Error:
 				case LogType.Exception:
 				case LogType.Assert:
-					LogError(condition);
+					WriteLine(text);
 					break;
 				case LogType.Warning:
-					LogWarning(condition);
+					WriteLine(text);
 					break;
 				case LogType.Log:
-					Log(condition);
+					WriteLine(text);
 					break;
 			}
 			Coord whereCursorEnded = State.Cursor.position2d;
@@ -203,9 +218,35 @@ namespace NonStandard.Cli {
 			State.KeepInputCursorOnInput();
 			State.WriteInputWithColor(inputText, color);
 		}
-		private void Log(object message) => WriteLine(message.ToString());
-		private void LogError(object message) => WriteLine(message.ToString());
-		private void LogWarning(object message) => WriteLine(message.ToString());
+		private string StackTrace(int stackOffset = 0) {
+			StringBuilder sb = new StringBuilder();
+			IList<string> stack = ReflectionExtension.GetStackFullPath(-1, 3);
+			int start = 0;
+			for(int i = 0; i < stack.Count; ++i) {
+				string path = stack[i];
+				int fileStart = path.LastIndexOf(System.IO.Path.DirectorySeparatorChar);
+				if (fileStart < 0) fileStart = path.LastIndexOf(System.IO.Path.AltDirectorySeparatorChar);
+				string file = path.Substring(fileStart + 1);
+				stack[i] = file;
+				if (file.StartsWith("Show.cs:")) { start = i + 1; }
+			}
+			for (int i = start; i < stack.Count; ++i) {
+				sb.Append(stack[i]);
+			}
+			return sb.ToString();
+		}
+		public void Log(object message) => Log(message.ToString(), 2);
+		public void LogError(object message) => LogError(message.ToString(), 2);
+		public void LogWarning(object message) => LogWarning(message, 2);
+		public void Log(object message, int stackOffset) => Log(message.ToString(), StackTrace(stackOffset));
+		public void LogError(object message, int stackOffset) => LogError(message.ToString(), StackTrace(stackOffset));
+		public void LogWarning(object message, int stackOffset) => LogWarning(message, StackTrace(stackOffset));
+		public void Log(object message, string tag) => Application_logMessageReceived(message.ToString(),
+			tag, LogType.Log);
+		public void LogError(object message, string tag) => Application_logMessageReceived(message.ToString(),
+			tag, LogType.Error);
+		public void LogWarning(object message, string tag) => Application_logMessageReceived(message.ToString(),
+			tag, LogType.Warning);
 		public void Write(char c) => Write(c.ToString());
 		public void Write(object o) => Write(o.ToString());
 		public void WriteLine(string text) => Write(text + "\n");
