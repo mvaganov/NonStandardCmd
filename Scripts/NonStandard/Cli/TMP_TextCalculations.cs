@@ -158,6 +158,43 @@ namespace NonStandard.Cli {
 			return tmp_text;
 		}
 
+		public void SetCharColor(Coord coord, Color[] fcolors, Color[] bcolors = null) {
+			if (fcolors != null) {            SetCharColor(GetForegroundText(), coord, fcolors); }
+			if (bcolors != null && _backText != null) { SetCharColor(_backText, coord, bcolors); }
+		}
+
+		public void SetCharColor(int index, Color[] fcolors, Color[] bcolors = null) {
+			if (fcolors != null) {            SetCharColor(GetForegroundText(), index, fcolors); }
+			if (bcolors != null && _backText != null) { SetCharColor(_backText, index, bcolors); }
+		}
+
+		public TMP_Text GetForegroundText() {
+			return inputField ? inputField.textComponent : _foreText;
+		}
+
+		public void SetCharColor(TMP_Text textOutput, Coord coord, Color[] colors) {
+			CoordRect limit = console.Window.Limit;
+			int index = limit.Width * coord.Row + coord.Col;
+			SetCharColor(textOutput, index, colors);
+		}
+
+		public void SetCharColor(TMP_Text textOutput, int index, Color[] colors) {
+			Debug.Log("setting for "+textOutput);
+			TMP_CharacterInfo[] chars = textOutput.textInfo.characterInfo;
+			for (int i = 0; i < colors.Length; ++i) {
+				TMP_CharacterInfo cinfo = chars[index];
+				if (cinfo.character == TMProTextOutputTerminator) break;
+				if (!cinfo.isVisible) continue;
+				int vertexIndex = cinfo.vertexIndex;
+				for (int m = 0; m < textOutput.textInfo.meshInfo.Length; ++m) {
+					TMP_MeshInfo meshInfo = textOutput.textInfo.meshInfo[m];
+					if (vertexIndex < 0 || vertexIndex >= meshInfo.colors32.Length) { continue; }
+					SetTmpTextQuadColor(vertexIndex, meshInfo.colors32, colors[i]);
+				}
+				++index;
+			}
+		}
+
 		private bool SetTmpTextQuadColor(int vertexIndex, Color32[] vertColors, Color color) {
 			if (vertexIndex >= vertColors.Length || vertColors[vertexIndex].EqualRgba(color)) { return false; }
 			vertColors[vertexIndex + 0] = color;
