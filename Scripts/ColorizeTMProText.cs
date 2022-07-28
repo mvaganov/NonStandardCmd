@@ -11,20 +11,19 @@ public class ColorizeTMProText : MonoBehaviour {
 	[ContextMenuItem("Colorize text",nameof(ColorizeText))]
 	[SerializeField] private bool _colorizeInEditor;
 #endif
-	public UnityConsoleOutput consoleOutput;
 	public List<SyntaxColor> _colorList;
 	private Dictionary<string, SyntaxColor> _colorDictionary = new Dictionary<string, SyntaxColor>();
 
 	private static Color _unsetColor = new Color(1f, 0f, 1f, 0f);
-	public Color _defaultColor = _unsetColor;
-	public TMP_Text textComponent;
+	private Color _defaultColor = _unsetColor;
+	private TMP_Text textComponent;
 	private string _calculatedText;
 	[System.Serializable] public class SyntaxColor {
 		public string syntax;
 		public Color color;
 		public bool colorizeEndsByDepth;
 	}
-	public List<Color> nestedDepth = new List<Color>() {
+	private List<Color> nestedDepth = new List<Color>() {
 		Color.red, Color.green, Color.blue, Color.yellow, Color.magenta, Color.cyan
 	};
 
@@ -36,6 +35,7 @@ public class ColorizeTMProText : MonoBehaviour {
 
 	private void OnValidate() {
 		if (_colorizeInEditor) {
+			if (textComponent == null) { textComponent = GetComponent<TMP_Text>(); }
 			if (textComponent.text != _calculatedText) { ColorizeText(); }
 		}
 	}
