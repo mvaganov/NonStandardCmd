@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
+[RequireComponent(typeof(TMPro.TMP_InputField))]
 public class ColorizeTMProText : MonoBehaviour {
 #if UNITY_EDITOR
 	[ContextMenuItem("Colorize text",nameof(ColorizeText))]
@@ -18,11 +19,21 @@ public class ColorizeTMProText : MonoBehaviour {
 	private Color _defaultColor = _unsetColor;
 	private TMP_Text textComponent;
 	private string _calculatedText;
+	public TMP_Text TextComponent => textComponent != null ? textComponent : textComponent = GetComponent<TMP_InputField>().textComponent;
 	[System.Serializable] public class SyntaxColor {
 		public string syntax;
 		public Color color;
 		public bool colorizeEndsByDepth;
 	}
+
+	[System.Serializable] public class ColorSegment {
+		public Color color;
+		public int index;
+		public int count;
+		public ColorSegment(int index, int count, Color color)
+			{ this.index = index; this.count = count; this.color = color; }
+	}
+
 	private List<Color> nestedDepth = new List<Color>() {
 		Color.red, Color.green, Color.blue, Color.yellow, Color.magenta, Color.cyan
 	};
@@ -35,8 +46,7 @@ public class ColorizeTMProText : MonoBehaviour {
 
 	private void OnValidate() {
 		if (_colorizeInEditor) {
-			if (textComponent == null) { textComponent = GetComponent<TMP_Text>(); }
-			if (textComponent.text != _calculatedText) { ColorizeText(); }
+			if (TextComponent.text != _calculatedText) { ColorizeText(); }
 		}
 	}
 
@@ -45,7 +55,11 @@ public class ColorizeTMProText : MonoBehaviour {
 	}
 
 	void ColorizeText() {
-		_calculatedText = textComponent.text;
+		TMP_Text txt = TextComponent;
+		if (txt == null) {
+			throw new System.Exception("no TMP text in "+name+"??");
+		}
+		_calculatedText = txt.text;
 		_colorList.ForEach(sc => _colorDictionary[sc.syntax] = sc);
 		Tokenizer tok = new Tokenizer();
 		string text = UiText.GetText(gameObject);
@@ -61,6 +75,7 @@ public class ColorizeTMProText : MonoBehaviour {
 		}));
 		//Debug.Log(tok.DebugPrint());
 		Color[] color = new Color[1];
+		List<ColorSegment> colorSegs = new List<ColorSegment>();
 		for (int i = 0; i < tokens.Count; i++) {
 			if (!_colorDictionary.TryGetValue(tokens[i].MetaType, out SyntaxColor syntaxColor)) {
 				continue;
@@ -73,57 +88,63 @@ public class ColorizeTMProText : MonoBehaviour {
 				Delim endDelim = st.endDelim;
 				string beginStr = begin.ToString();
 				string endStr = end.ToString();
-				color[0] = nestedDepth[st.Depth % nestedDepth.Count];
-				Debug.Log(beginDelim.text + "@"+begin.index+"   "+ endDelim.text + "@"+end.index);
-				BADCODE = true;
-				SetCharColor(textComponent, begin.index, color, beginDelim.text.Length);
-				SetCharColor(textComponent, end.index, color, endDelim.text.Length);
-				BADCODE = false;
+				Color thisColor = nestedDepth[st.Depth % nestedDepth.Count];
+				color[0] = thisColor;
+				//Debug.Log(beginDelim.text + "@"+begin.index+"   "+ endDelim.text + "@"+end.index);
+				colorSegs.Add(new ColorSegment(begin.index, beginDelim.text.Length, thisColor));
+				colorSegs.Add(new ColorSegment(end.index, endDelim.text.Length, thisColor));
+				//BADCODE = true;
+				//SetCharColor(textComponent, begin.index, thisColor, beginDelim.text.Length);
+				//SetCharColor(textComponent, end.index, thisColor, endDelim.text.Length);
+				//BADCODE = false;
 			} else {
-				string t = tokens[i].ToString();
+				Token token = tokens[i];
+				string t = token.ToString();
 				color[0] = syntaxColor.color;
-				SetCharColor(textComponent, tokens[i].index, color, t.Length);
+				colorSegs.Add(new ColorSegment(token.index, t.Length, syntaxColor.color));
+				//SetCharColor(textComponent, tokens[i].index, syntaxColor.color, t.Length);
 			}
+		}
+		colorSegs.Sort((a,b)=>a.index.CompareTo(b.index));
+		foreach (ColorSegment colorSeg in colorSegs) {
+			SetCharColor(textComponent, colorSeg.index, colorSeg.color, colorSeg.count);
 		}
 		//SetCharColor(textComponent, 1, new Color[] { Color.red, Color.red, Color.red, Color.red });
 		textComponent.UpdateVertexData(TMP_VertexDataUpdateFlags.Colors32);
 		//textComponent.UpdateVertexData(TMP_VertexDataUpdateFlags.Vertices);
 	}
-	private static bool BADCODE = false;
+	//private static bool BADCODE = false;
 
 	private const char TMProTextOutputTerminator = '\u200B';
-	public static void SetCharColor(TMP_Text textOutput, int index, Color[] colors, int count = -1) {
+	public static void SetCharColor(TMP_Text textOutput, int index, Color color, int count) {
 		TMP_CharacterInfo[] chars = textOutput.textInfo.characterInfo;
-		bool SHOWME = BADCODE && index == 0;
-		if (SHOWME) { Debug.LogWarning("count "+count); }
-		if (count < 0) { count = colors.Length; }
-		for (int i = 0; i < count; ++i) {
-			if (SHOWME) { Debug.LogWarning("index " + index); }
+		//bool SHOWME = BADCODE && index == 0;
+		for (int i = 0; i < count ; ++i) {
+			//if (SHOWME) { Debug.LogWarning("index " + index); }
 			TMP_CharacterInfo cinfo = chars[index++];
 			if (cinfo.character == TMProTextOutputTerminator) {
-				if (SHOWME) { Debug.LogWarning("breaking! " + (int)TMProTextOutputTerminator); }
+				//if (SHOWME) { Debug.LogWarning("breaking! " + (int)TMProTextOutputTerminator); }
 				break;
 			}
 			if (!cinfo.isVisible) {
-				if (SHOWME) { Debug.LogWarning("invisible! " + (int)cinfo.character); }
+				//if (SHOWME) { Debug.LogWarning("invisible! " + (int)cinfo.character); }
 				continue;
 			}
 			int vertexIndex = cinfo.vertexIndex;
-			Color color = colors[i % colors.Length];
 			for (int m = 0; m < textOutput.textInfo.meshInfo.Length; ++m) {
 				TMP_MeshInfo meshInfo = textOutput.textInfo.meshInfo[m];
 				if (vertexIndex < 0 || vertexIndex >= meshInfo.colors32.Length) {
-					if (SHOWME) { Debug.LogWarning("vertindex " + vertexIndex); }
+					//if (SHOWME) { Debug.LogWarning("vertindex " + vertexIndex); }
 					continue;
 				}
-				if (SHOWME) { Debug.LogWarning("colorchanging at " + vertexIndex); }
+				//if (SHOWME) { Debug.LogWarning("colorchanging at " + vertexIndex); }
 				SetTmpTextQuadColor(vertexIndex, meshInfo.colors32, color);
 			}
 		}
 	}
 	private static bool SetTmpTextQuadColor(int vertexIndex, Color32[] vertColors, Color color) {
 		if (vertexIndex >= vertColors.Length || vertColors[vertexIndex].EqualRgba(color)) {
-			if (BADCODE && vertexIndex == 0) { Debug.LogWarning("jumping out. "+ vertColors[vertexIndex]+" vs "+color); }
+			//if (BADCODE && vertexIndex == 0) { Debug.LogWarning("jumping out. "+ vertColors[vertexIndex]+" vs "+color); }
 			return false;
 		}
 		vertColors[vertexIndex + 0] = color;
