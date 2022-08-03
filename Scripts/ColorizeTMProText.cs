@@ -9,7 +9,8 @@ using UnityEngine;
 
 public class ColorizeTMProText : MonoBehaviour {
 #if UNITY_EDITOR
-	[ContextMenuItem("Colorize text",nameof(ColorizeText))]
+	[ContextMenuItem("Colorize text",nameof(ColorizeText)),
+	ContextMenuItem("LF Endings",nameof(ForceLfEndings))]
 	[SerializeField] private bool _colorizeInEditor;
 #endif
 	public List<SyntaxColor> _colorList = new List<SyntaxColor>() {
@@ -83,6 +84,14 @@ public class ColorizeTMProText : MonoBehaviour {
 
 	void Start() {
 		ColorizeText();
+	}
+
+	public void ForceLfEndings() {
+		string[] splitToCutOutBadChars = textInput.text.Split('\r');
+		if (splitToCutOutBadChars.Length > 1) {
+			textInput.text = splitToCutOutBadChars.JoinToString(""); ;
+			Debug.Log("getting rid of " + (splitToCutOutBadChars.Length - 1) + " bad chars");
+		}
 	}
 
 	void ColorizeText() {
