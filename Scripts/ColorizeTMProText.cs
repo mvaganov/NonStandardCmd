@@ -69,12 +69,29 @@ public class ColorizeTMProText : MonoBehaviour {
 	}
 
 	private void OnValidate() {
+#if UNITY_EDITOR
 		if (_colorizeInEditor) {
-			//if (TextComponent.text != _calculatedText) { ColorizeText(); }
+			RefreshColorize rc = textInput.GetComponent<RefreshColorize>();
+			if (rc == null) {
+				rc = textInput.gameObject.AddComponent<RefreshColorize>();
+				rc.colorizer = this;
+			}
 		}
+#endif
 		if (textInput != null) {
 			EventBind.IfNotAlready(textInput.onValueChanged, this, nameof(NotifyTouchedText));
 		}
+	}
+
+	public class RefreshColorize : MonoBehaviour {
+#if UNITY_EDITOR
+		[SerializeField] public ColorizeTMProText colorizer;
+		private void OnValidate() {
+			if (colorizer != null && colorizer._colorizeInEditor) {
+				colorizer.ColorizeText();
+			}
+		}
+#endif
 	}
 
 	public void NotifyTouchedText(string text) {
