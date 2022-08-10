@@ -179,10 +179,7 @@ public class ColorizeTMProText : MonoBehaviour {
 	}
 	
 	public void ColorizeTextWith(IList<ColorChunk> colors) {
-		//Debug.Log(textComponent);
-		//Debug.Log(textComponent.textInfo);
-		//Debug.Log(textComponent.textInfo.meshInfo);
-		//Debug.Log(textComponent.textInfo.meshInfo.Length);
+		if (textComponent == null) { return; }
 		if (textComponent.textInfo.meshInfo.Length > 1) {
 			StringBuilder richErrorMessage = new StringBuilder();
 			TMP_CharacterInfo[] chars = textComponent.textInfo.characterInfo;
@@ -211,7 +208,7 @@ public class ColorizeTMProText : MonoBehaviour {
 		//bool SHOWME = false;
 		for (int i = 0; i < count ; ++i) {
 			if (index >= chars.Length) {
-				Debug.LogWarning("can't set color of index " + index + ", limit " + chars.Length+" "+textOutput.text);
+				//Debug.LogWarning("can't set color of index " + index + ", limit " + chars.Length+" "+textOutput.text);
 				return;
 			}
 			//if (SHOWME) { Debug.LogWarning("index " + index); }
