@@ -29,7 +29,6 @@ public class ColorizeTMProText : MonoBehaviour {
 	private Tokenizer _tokenizer;
 	private List<ColorChunk> _colorChunks;
 
-	private static Color _unsetColor = new Color(1f, 0f, 1f, 0f);
 	[SerializeField] private TMP_Text textComponent;
 	[SerializeField] private TMPro.TMP_InputField textInput;
 	private string _expectedText;
@@ -118,7 +117,6 @@ public class ColorizeTMProText : MonoBehaviour {
 		if (txt == null) {
 			throw new System.Exception("no TMP text in " + name + "??");
 		}
-		CalculateChange();
 		ColorDictionaryShouldMatchColorList();
 		Tokenizer tokenizer = new Tokenizer();
 		string text = UiText.GetText(gameObject);
@@ -130,23 +128,9 @@ public class ColorizeTMProText : MonoBehaviour {
 			}
 		}
 		List<Token> tokens = tokenizer.GetStandardTokens();
-		List<ColorChunk> colorChunks = CalculateColorChunks(tokens);
-		ColorizeTextWith(colorChunks);
+		_colorChunks = CalculateColorChunks(tokens);
+		ColorizeTextWith(_colorChunks);
 		//textComponent.UpdateVertexData(TMP_VertexDataUpdateFlags.Vertices);
-	}
-	private void CalculateChange() {
-		if (_expectedText != null) {
-			TMP_Text txt = TextComponent;
-			int cursorDelta = (textInput != null) ? textInput.caretPosition - _expectedIndex : 0;
-			if (_expectedText.Length < txt.text.Length) {
-				Debug.Log("text added " + cursorDelta + " @" + textInput.caretPosition + "  ("+ txt.text.Length+")");
-			} else if (_expectedText.Length > txt.text.Length) {
-				cursorDelta = txt.text.Length - _expectedText.Length;
-				Debug.Log("text removed " + (-cursorDelta) + " @" + textInput.caretPosition + "  (" + txt.text.Length + ")");
-			} else {
-				Debug.Log("no change? " + " @" + textInput.caretPosition + "  (" + txt.text.Length + ")");
-			}
-		}
 	}
 
 	private void ColorDictionaryShouldMatchColorList() {
@@ -168,7 +152,9 @@ public class ColorizeTMProText : MonoBehaviour {
 				Delim endDelim = st.endDelim;
 				Color thisColor = nestedDepth[st.Depth % nestedDepth.Count];
 				colorChunks.Add(new ColorChunk(begin.index, beginDelim.text.Length, thisColor));
-				colorChunks.Add(new ColorChunk(end.index, endDelim.text.Length, thisColor));
+				if (endDelim != null) {
+					colorChunks.Add(new ColorChunk(end.index, endDelim.text.Length, thisColor));
+				}
 			} else {
 				Token token = tokens[i];
 				string t = token.ToString();
@@ -179,21 +165,6 @@ public class ColorizeTMProText : MonoBehaviour {
 		return colorChunks;
 	}
 
-	public void InsertOffset(ColorChunk newChunk, IList<ColorChunk> chunks) {
-		int i;
-		int len = newChunk.Count;
-		for (i = 0; i < chunks.Count; i++) {
-			ColorChunk c = chunks[i];
-			if (c.startIndex >= newChunk.startIndex) { break; }
-			if (c.Contains(newChunk.startIndex)) {
-				c.endIndex += len;
-			}
-		}
-		for(; i < chunks.Count; ++i) {
-			chunks[i].Move(len);
-		}
-	}
-	
 	public void ColorizeTextWith(IList<ColorChunk> colors) {
 		if (textComponent == null || textComponent.textInfo == null || textComponent.textInfo.meshInfo == null) { return; }
 		if (textComponent.textInfo.meshInfo.Length > 1) {
@@ -290,16 +261,51 @@ public class ColorizeTMProText : MonoBehaviour {
 				parseState = Tokenizer.State.None;
 				break;
 		}
+		CalculateChange();
 		_expectedIndex = textInput.caretPosition;
 		_expectedText = textInput.text;
 	}
+	private void CalculateChange() {
+		if (_expectedText != null && _expectedText != textInput.text) {
+			int cursorDelta = (textInput != null) ? textInput.caretPosition - _expectedIndex : 0;
+			int whereChanged = textInput.caretPosition - cursorDelta;
+			if (_expectedText.Length < textInput.text.Length) {
+				//Debug.Log("text added " + countChanged + " @" + whereChanged + "  (" + textInput.text.Length + ")");
+				AdjustColorChunk(whereChanged, cursorDelta, _colorChunks);
+			} else {
+				//Debug.Log("text removed " + countChanged + " @" + whereChanged + "  (" + textInput.text.Length + ")");
+				AdjustColorChunk(whereChanged, cursorDelta, _colorChunks);
+			}
+			if (cursorDelta != 0) {
+				ColorizeTextWith(_colorChunks);
+			}
+		}
+	}
+
+	public void AdjustColorChunk(int index, int count, IList<ColorChunk> chunks) {
+		if (count == 0) { return; }
+		int i;
+		for (i = 0; i < chunks.Count; i++) {
+			ColorChunk c = chunks[i];
+			if (c.startIndex >= index) { break; }
+			if (c.Contains(index)) {
+				c.endIndex += count;
+				if (c.Count <= 0) {
+					chunks.RemoveAt(i--);
+				}
+			}
+		}
+		for (; i < chunks.Count; ++i) {
+			chunks[i].Move(count);
+		}
+	}
+
 	public void ColorizeWithCurrentTokens() {
 		if (_tokenizer == null) { return; }
 		if (_colorChunks == null) {
 			List<Token> tokens = _tokenizer.GetStandardTokens();
 			_colorChunks = CalculateColorChunks(tokens);
 		}
-		CalculateChange();
 		ColorizeTextWith(_colorChunks);
 	}
 }
