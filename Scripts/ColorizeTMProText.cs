@@ -24,14 +24,16 @@ public class ColorizeTMProText : MonoBehaviour {
 	private Dictionary<string, SyntaxColor> _colorDictionary = new Dictionary<string, SyntaxColor>();
 	private Color inputColor = Color.magenta;
 	public Tokenizer.State parseState = Tokenizer.State.None;
-	private float _waitingToParseTime = 3;
+	private float _waitingToParseTime = 1;
 	private float _waitingToparseTimer = 0;
 	private Tokenizer _tokenizer;
+	private List<ColorChunk> _colorChunks;
 
 	private static Color _unsetColor = new Color(1f, 0f, 1f, 0f);
 	[SerializeField] private TMP_Text textComponent;
 	[SerializeField] private TMPro.TMP_InputField textInput;
-	private string _calculatedText;
+	private string _expectedText;
+	private int _expectedIndex = -1;
 	public TMP_Text TextComponent => textComponent;// != null ? textComponent : textComponent = GetComponent<TMP_InputField>().textComponent;
 	[System.Serializable] public class SyntaxColor {
 		public string syntax;
@@ -116,7 +118,7 @@ public class ColorizeTMProText : MonoBehaviour {
 		if (txt == null) {
 			throw new System.Exception("no TMP text in " + name + "??");
 		}
-		_calculatedText = txt.text;
+		CalculateChange();
 		ColorDictionaryShouldMatchColorList();
 		Tokenizer tokenizer = new Tokenizer();
 		string text = UiText.GetText(gameObject);
@@ -131,6 +133,20 @@ public class ColorizeTMProText : MonoBehaviour {
 		List<ColorChunk> colorChunks = CalculateColorChunks(tokens);
 		ColorizeTextWith(colorChunks);
 		//textComponent.UpdateVertexData(TMP_VertexDataUpdateFlags.Vertices);
+	}
+	private void CalculateChange() {
+		if (_expectedText != null) {
+			TMP_Text txt = TextComponent;
+			int cursorDelta = (textInput != null) ? textInput.caretPosition - _expectedIndex : 0;
+			if (_expectedText.Length < txt.text.Length) {
+				Debug.Log("text added " + cursorDelta + " @" + textInput.caretPosition + "  ("+ txt.text.Length+")");
+			} else if (_expectedText.Length > txt.text.Length) {
+				cursorDelta = txt.text.Length - _expectedText.Length;
+				Debug.Log("text removed " + (-cursorDelta) + " @" + textInput.caretPosition + "  (" + txt.text.Length + ")");
+			} else {
+				Debug.Log("no change? " + " @" + textInput.caretPosition + "  (" + txt.text.Length + ")");
+			}
+		}
 	}
 
 	private void ColorDictionaryShouldMatchColorList() {
@@ -179,7 +195,7 @@ public class ColorizeTMProText : MonoBehaviour {
 	}
 	
 	public void ColorizeTextWith(IList<ColorChunk> colors) {
-		if (textComponent == null) { return; }
+		if (textComponent == null || textComponent.textInfo == null || textComponent.textInfo.meshInfo == null) { return; }
 		if (textComponent.textInfo.meshInfo.Length > 1) {
 			StringBuilder richErrorMessage = new StringBuilder();
 			TMP_CharacterInfo[] chars = textComponent.textInfo.characterInfo;
@@ -274,11 +290,16 @@ public class ColorizeTMProText : MonoBehaviour {
 				parseState = Tokenizer.State.None;
 				break;
 		}
+		_expectedIndex = textInput.caretPosition;
+		_expectedText = textInput.text;
 	}
 	public void ColorizeWithCurrentTokens() {
 		if (_tokenizer == null) { return; }
-		List<Token> tokens = _tokenizer.GetStandardTokens();
-		List<ColorChunk> colorChunks = CalculateColorChunks(tokens);
-		ColorizeTextWith(colorChunks);
+		if (_colorChunks == null) {
+			List<Token> tokens = _tokenizer.GetStandardTokens();
+			_colorChunks = CalculateColorChunks(tokens);
+		}
+		CalculateChange();
+		ColorizeTextWith(_colorChunks);
 	}
 }
