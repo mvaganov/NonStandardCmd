@@ -110,7 +110,7 @@ namespace NonStandard.Commands {
 			//Show.Log(tokenizer);
 			//tokenizer = command.Tokenize(text);
 			List<Token> tokens = new List<Token>(tokenizer.Tokens);
-			orderedValues.Add(tokenizer.GetStr(0));
+			orderedValues.Add(tokenizer.GetTokenAsString(0));
 			Argument[] args = command.arguments;
 			// add arguments to the dictionary
 			for (int i = 1; i < tokens.Count; ++i) {
